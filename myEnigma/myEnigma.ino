@@ -678,7 +678,7 @@ const enigmaModels_t EnigmaModels[] PROGMEM = {
 //also note that MAXPRESET*SETTINGSIZE < EEPROM.length()
 
 typedef struct {
-  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without loosing eeprom info
+  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without losing eeprom info
   enigmaModel_t model;
   uint8_t   ukw;               /// Umkehrwalze - what reflector that is loaded
   uint8_t   walze[WALZECNT];   /// what wheel that currently is in the 3 or 4 positions
@@ -964,7 +964,7 @@ void playSound(uint16_t fileno, boolean wait=true) {
     sendCommand(dfcmd_PLAYNAME,fileno);
     //Wait for it to start playing
     cnt=0;
-    while (digitalRead(BUSY) == HIGH && cnt<100){cnt++;delay(1);}
+    while (digitalRead(BUSY) == HIGH && cnt<200){cnt++;delay(1);}
     retry--;
   } while (digitalRead(BUSY) == HIGH && retry > 0); // if not started send again
   
@@ -4143,13 +4143,13 @@ void loop() {
 	  Serial.print(F("sound "));
 	  if (sound_active==active){
 	    Serial.println(F("OFF"));
-	    playSound(2020,false); // sound
+	    playSound(2020); // sound
 	    playSound(2024); // off
 	    sound_active=inactive;
 	  } else if (sound_active==inactive){
 	    Serial.println(F("ON"));
 	    sound_active=active;
-	    playSound(2020,false); // sound
+	    playSound(2020); // sound
 	    playSound(2023); // on
 	  }else{
 	    Serial.println(F("missing"));
@@ -4159,13 +4159,13 @@ void loop() {
           Serial.print(F("TTS "));
           if (settings.tts){
             Serial.println(F("OFF"));
-	    playSound(2022,false); // tts
+	    playSound(2022); // tts
 	    playSound(2024); // off
             settings.tts=false;
           } else {
             Serial.println(F("ON"));
             settings.tts=true;
-	    playSound(2022,false); // tts
+	    playSound(2022); // tts
 	    playSound(2023); // on
           }
           break;
@@ -4229,6 +4229,18 @@ void loop() {
 	  delay(2000);
 	  decimalPoint(1,false);
 	  break;
+
+	case 'Q': // save preset 1 - 4
+	case 'W':
+	case 'E':
+	case 'R':
+	  char strBuffer[]="PR X";
+	  strBuffer[3] = '0' + key;
+	  displayString(strBuffer, 0);
+	  saveSettings(key);
+	  delay(2000);
+	  break;
+
 	} // switch
 	for (i=0;i<sizeof(prevRamState);i++){HT.displayRam[i]=prevRamState[i];} // Restore current state
 	HT.sendLed();
