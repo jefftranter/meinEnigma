@@ -25,11 +25,11 @@
  *
  *  History:
  *  v0.00 - test of library, keyboard and LEDs
- *  v0.01 - more parts now working, just missing wheel and enigma code.
+ *  v0.01 - more parts now working, just missing wheel and Enigma code.
  *  v0.02 - added wheel code
  *  v0.03 - added crypto code
  *  v0.04 - added basic serial API
- *  v0.05 - added virtual plugboard, morsecode and almost all functions
+ *  v0.05 - added virtual plugboard, Morse code and almost all functions
  *  v0.06 - added soundboard
  *  v0.07 - added clock
  *  v0.90 - changed lookup tables to match first PCB version
@@ -45,7 +45,7 @@
  * Shortcomings (all due to lack of program space):
  *   No UKWD
  *   No UHR
- *   limited number of enigmas partly because
+ *   limited number of Enigmas partly because
  *     always doublestep
  *     UKW always fixed
  *   Limited functions on serial API
@@ -66,7 +66,7 @@
  *    preset0 is always what was last used.
  *    preset 1-E are available to the user.
  *    the space of preset F is used for odometer and serial number
- *   factory reset will not clear the odometer, wouldn't do that on the real enigma (one with counter).
+ *   factory reset will not clear the odometer, wouldn't do that on the real Enigma (one with counter).
  *
  * To consider:
  *   Maybe change the code for UKW so when a UKW is selected the ukwD array is loaded with the config
@@ -214,7 +214,7 @@ static const uint8_t morsecode[] PROGMEM={
 //#define SPK // Speaker/Piezo or simple BEEP thingy
 
 //toneFq and timeBase are variables so they can be changed in sw later
-uint8_t toneFq; // tone frequenze/100 so 1khz = 10 and 20khz=200
+uint8_t toneFq; // tone frequency/100 so 1kHz = 10 and 20kHz=200
 uint8_t timeBase; //ms to base all numbers on
 #define timeDitt  timeBase
 #define timeDah   timeBase*3
@@ -230,7 +230,7 @@ uint8_t timeBase; //ms to base all numbers on
 //[wheel1low,wheel1high,wheel2low,wheel2high...
 
 #define WALZECNT 4
-//if count is something else than 4 the pin this definitions (and several other things) also need to change
+//if count is something else than 4 the pin these definitions (and several other things) also need to change
 static const uint8_t encoderPins[WALZECNT * 2] PROGMEM = {3, 2, 4, 5, 6, 7, 10,11};
 volatile uint8_t encoderState[WALZECNT] = {0xff, 0xff, 0xff, 0xff};
 volatile unsigned long encoderChange[WALZECNT] = {0, 0, 0, 0};// When last change happened
@@ -265,7 +265,7 @@ volatile boolean encoderMoved[WALZECNT] = {false, false, false, false};
 #define SwitchPos2 (maxADCval/((SwitchPositions-1)*2))*3  /// "Plugboard"
 #define SwitchPos3 (maxADCval/((SwitchPositions-1)*2))*5  /// "wheels" - select what wheel is where
 #define SwitchPos4 (maxADCval/((SwitchPositions-1)*2))*7  /// "ukw" and "etw" (where that is an option) - which one and its position (for the ones that can move)
-#define SwitchPos5 (maxADCval/((SwitchPositions-1)*2))*9  /// "model" - select what enigma model, leftmost pos
+#define SwitchPos5 (maxADCval/((SwitchPositions-1)*2))*9  /// "model" - select what Enigma model, leftmost pos
 //6, OFF - leftmost position, powered off
 ///
 ///What mode the modeswitch currently is in and with that what mode to operate in
@@ -273,7 +273,7 @@ volatile boolean encoderMoved[WALZECNT] = {false, false, false, false};
 enum operationMode_t {run,plugboard,rotortype,ukw,model,none} operationMode;
 
 ///
-///Serial input stuff, arduino serial input buffer is 64 bytes
+///Serial input stuff, Arduino serial input buffer is 64 bytes
 ///max allowed msg length is 250 characters plus some spaces = 300
 ///Tried to make this buffer larger hoping to be able to capture long strings but it's still issues
 /// possible due to delays in the main loop and speed it arrives at (64 bytes takes 0.55ms at 115200)
@@ -502,7 +502,7 @@ static const uint8_t DEBUGPLUG=1;
 #ifdef NOMEMLIMIT
 uint8_t debugMask=0;
 #endif
-//enigma models
+// Enigma models
 // http://www.cryptomuseum.com/crypto/enigma/timeline.htm
 // Year  Army/Air   Navy UKW    Wheels
 // 1933     I       -    UKW-A  I II III
@@ -517,7 +517,7 @@ uint8_t debugMask=0;
 //      it just happens to match up and is commonly used to represent 3 wheel or 4 wheel models
 
 //
-// Several enigma models and their wheel count & wiring
+// Several Enigma models and their wheel count & wiring
 // http://www.cryptomuseum.com/crypto/enigma/wiring.htm
 //
 typedef enum {
@@ -532,7 +532,7 @@ typedef enum {
   nopb
 } vpb_t;
 ///
-/// a list of valid enigma models
+/// a list of valid Enigma models
 ///
 typedef enum {
   FIRST,
@@ -557,7 +557,7 @@ typedef enum {
   LAST
   } enigmaModel_t;
 
-//The different enigma models have different configs
+//The different Enigma models have different configs
 typedef struct {
   enigmaModel_t model;
   char display[5]; //The name to show on the alnum display 4 UCASE letters plus \0
@@ -678,17 +678,17 @@ const enigmaModels_t EnigmaModels[] PROGMEM = {
 //also note that MAXPRESET*SETTINGSIZE < EEPROM.length()
 
 typedef struct {
-  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without loosing eeprom info
+  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without losing eeprom info
   enigmaModel_t model;
   uint8_t   ukw;               /// Umkehrwalze - what reflector that is loaded
   uint8_t   walze[WALZECNT];   /// what wheel that currently is in the 3 or 4 positions
-  uint8_t   etw;               /// Eintrittswalze - entry wheel, always 1 for military enigma.
+  uint8_t   etw;               /// Eintrittswalze - entry wheel, always 1 for military Enigma.
   int8_t    ringstellung[WALZECNT]; /// Setting of the wheel ring, left to right, 0-sizeof(walze[0]) not the letters!
   vpb_t     plugboardMode;     /// if virtual plugboard is enabled or not. 
   letters_t plugboard;
   int8_t    currentWalze[WALZECNT]; /// current position of the wheel, 0-sizeof(walze[0]) not the letters!
   uint8_t   grpsize;            /// Size of groups to print out over serial
-  boolean   morseCode;		/// Send morsecode or not
+  boolean   morseCode;		/// Send Morse code or not
   boolean   tts;                /// say letters encoded
   unsigned int checksum;
 } machineSettings_t;
@@ -698,7 +698,7 @@ unsigned long serialNumber;  /// static number stored in eeprom and set with oth
 /********************************/
 
 machineSettings_t settings; // current settings and also what is saved in eeprom
-enigmaModels_t EnigmaModel; // attributes for the current enigma model
+enigmaModels_t EnigmaModel; // attributes for the current Enigma model
 boolean plugboardPresent=true;   // whether the plugboard is physical(true) or virtual(false)
 boolean plugboardEmpty=false;    // whether anything is plugged in anywhere
 boolean standalone=false;	 // If standalone (no hardware, just serialAPI)
@@ -706,7 +706,7 @@ int8_t  resetLevel=100; 	 // threshold for reset, put as variable to be able to 
 int8_t  currentWalzePos[WALZECNT]; // current position of the wheel, used during config
 
 int8_t lastKey; // last key pressed, needed to pass the info between subroutines
-char   lastKeyCode; // after parsed trough scancode
+char   lastKeyCode; // after parsed through scancode
 uint8_t lastPreset; // last loaded preset
 
 HT16K33 HT;
@@ -820,7 +820,7 @@ const byte steckerbrett[] PROGMEM = "QWERTZUIOASDFGHJKPYXCVBNML"; //
 //
 
 //Decimal points are handled outside the ht16k33 (not enough wires).
-//they are wired to analog io pins on the arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
+//they are wired to analog io pins on the Arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
 static const uint8_t dp[] PROGMEM = {14,15,16,17}; // need to use analog port a0,a1,a2,a3 for output (a4 & 5 are i2c, a6 & a7 are switch and is big red button.)
 
 /****************************************************************/
@@ -1326,7 +1326,7 @@ uint8_t readSettings(uint8_t preset) {
 
 /****************************************************************/
 //Some code from http://playground.arduino.cc/Main/PinChangeInterrupt
-//This is tested on an arduino uno and arduino nano, other models may not work
+//This is tested on an Arduino Uno and Arduino Nano, other models may not work
 void pciSetup(uint8_t pin)
 {
   *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
@@ -1392,7 +1392,7 @@ void decimalPoint(uint8_t dpoint, boolean state) {
 } // decimalPoint
 
 /****************************************************************/
-// Load enigma config to sram
+// Load Enigma config to SRAM
 void  copyEnigmaModel(enigmaModel_t model){
   enigmaModels_t checkModel;
   uint8_t i=-1;
@@ -1796,7 +1796,7 @@ void sanitizeSettings(){
 /****************************************************************/
 // Check what position the switch is in 
 // 6 - OFF, no power to mcu
-// 5 - "model" - select what enigma model, leftmost pos
+// 5 - "model" - select what Enigma model, leftmost pos
 //   if button is pressed a preset can be choosen
 // 4 - "ukw" - which one and its position (for the ones that can move)
 // 3 - "rotortype" - select what rotors that are installed
@@ -1825,7 +1825,7 @@ void checkSwitchPos(){
     return;
   }
 
-  adcval=analogRead(Switch);delay(1);//set internal arduino mux to position "Switch" and wait 1ms for value to stabalize
+  adcval=analogRead(Switch);delay(1);//set internal Arduino mux to position "Switch" and wait 1ms for value to stabilize
   adcval=analogRead(Switch); // get the value
 
   if (adcval<SwitchPos1){
@@ -1900,7 +1900,7 @@ void loadDefaults(){
   settings.fwVersion = VERSION;
   settings.plugboardMode=physicalpb;
   settings.grpsize  = 5; // size of groups printed over serial
-  settings.morseCode=false;// Don't send morsecode by default
+  settings.morseCode=false;// Don't send Morse code by default
   settings.tts=true;     // Do speak out the letters
   saveSettings(0);
 }//loadDefaults
@@ -2014,7 +2014,7 @@ void setup() {
  
   //Check if standalone
   //real lights are only 0-31 and 64-127 so lets test turning on some lights in 32-63 range
-  //if they stick we probably have a ht16k33 chip there and with that the rest of the enigma
+  //if they stick we probably have a ht16k33 chip there and with that the rest of the Enigma
   //if not it is probably standalone and we need to "disable" things like the switch
   //or it will fill the serial port with switch changes, and other things or it will be slow.
   for (i=34;i<63;i++){
@@ -2214,7 +2214,7 @@ void setup() {
     digitalWrite(spkPin,LOW);
 #endif
   timeBase=90; // ms to base everything off
-  toneFq=15; // 1.5khz
+  toneFq=15; // 1.5kHz
 
   Serial.println();
   Serial.println(F("Ready"));
@@ -3103,8 +3103,8 @@ boolean checkNotch(uint8_t i){
 //        return
 //(4th wheel never turn by notch so notch on 3rd doesn't matter)
 //
-//BUG: this works for military enigma but not for some other like enigmaG which doesn't have double step issue
-//     and when enigmaG is implemented that issue will be addressed
+//BUG: this works for military Enigma but not for some other like EnigmaG which doesn't have double step issue
+//     and when EnigmaG is implemented that issue will be addressed
 //
 
 //local helper function
@@ -3668,7 +3668,7 @@ void parseCommand() {
       // should accept roman also
       // should accept space separated
       // should accept "G" or "Gamma" and "B" or "Beta"
-      // should make an entry of "3" or "III" for any enigma=> rotor III for that model
+      // should make an entry of "3" or "III" for any Enigma=> rotor III for that model
       if (val.length()!=0){
 	val+=",";
 	i=0;
@@ -3882,7 +3882,7 @@ void sendLetter(char ch){
  * once pressed, light up corresponding LED (letter)
  * if more than one key is pressed, turn off all letters
  * and leave them off until all keys are released.
- * The reason is that on the original enigma you can not press two keys at 
+ * The reason is that on the original Enigma you can not press two keys at 
  * the same time since then the wheel rotation gets messed up
  * Optional:
  *   press one key
@@ -4091,7 +4091,7 @@ void loop() {
 	//C show clock
 	//K turn on/off keyboard and rotor click sound
 	//L turn on all lights
-	//M turn on/off morsecode
+	//M turn on/off Morse code
 	//O Show odometer
 	//S Show serial number
         //T turn on/off TTS - text to speach
@@ -4193,7 +4193,7 @@ void loop() {
 	  }
 	  break;
 
-	case 'M': // turn on/off morsecode
+	case 'M': // turn on/off Morse code
 	  Serial.print(F("morsecode "));
 	  if (settings.morseCode){
 	    Serial.println(F("OFF"));
@@ -4361,7 +4361,7 @@ const char msg6[] PROGMEM = {"WYVTZJYQSBJNKBVDEWQKMIFDXUKPJBLYLGNNYSRLWFLESBWRQU
 /****************************************************************/
 /****************************************************************/
 // Test version 
-// to test enigma encryption
+// to test Enigma encryption
 //
 void loop() {
 
@@ -4597,7 +4597,7 @@ void loop() {
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
  Using double buffer because when a long 64+ string is sent it takes a while to process and
- the arduino buffer may be lost.
+ the Arduino buffer may be lost.
 */
 
 void serialEvent() {
@@ -4622,7 +4622,7 @@ void serialEvent() {
 
       // if the incoming character is a newline, set a flag
       // so the main loop can do something about it:
-      //make sure we don't go too far, just force in a new line after MAXSERIALBUFF characters
+      //make sure we don't go too far, just force in a newline after MAXSERIALBUFF characters
       if (serialInputBuffer.length()==MAXSERIALBUFF-2){
 	serialInputBuffer += '\n';
 	inChar = '\n';
