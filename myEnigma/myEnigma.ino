@@ -273,7 +273,7 @@ volatile boolean encoderMoved[WALZECNT] = {false, false, false, false};
 enum operationMode_t {run,plugboard,rotortype,ukw,model,none} operationMode;
 
 ///
-///Serial input stuff, arduino serial input buffer is 64 bytes
+///Serial input stuff, Arduino serial input buffer is 64 bytes
 ///max allowed msg length is 250 characters plus some spaces = 300
 ///Tried to make this buffer larger hoping to be able to capture long strings but it's still issues
 /// possible due to delays in the main loop and speed it arrives at (64 bytes takes 0.55ms at 115200)
@@ -453,22 +453,22 @@ const char* const WALZE[] PROGMEM =
 //List of valid commands, must start with "!"
 #ifdef NOMEMLIMIT
 #ifdef GERMAN
-const char APICMDLIST[] PROGMEM = "!EINSTELLUNGEN!MODELL!UKW!WALZE!RINGSTELLUNG!STECKERBRETT!ANZFANG!TEILNEHMER!SPAREN!LADEN!LOGDATEI!DEBUG!AUSFÜHRLICHE!DUKW!";
+const char APICMDLIST[] PROGMEM = "!EINSTELLUNGEN!MODELL!UKW!WALZE!RINGSTELLUNG!STECKERBRETT!ANZFANG!TEILNEHMER!SPAREN!LADEN!LOGDATEI!DEBUG!AUSFÜHRLICHE!DUKW";
 #else
-const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZESAVE!LOAD!LOGLEVEL!DEBUG!VERBOSE!DUKW!";
+const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZESAVE!LOAD!LOGLEVEL!DEBUG!VERBOSE!DUKW";
 #endif
 #else
 #ifdef GERMAN
 #ifdef CLOCK
-const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!WALZE!RING!PLUGBOARD!START!GROUPSIZE|SAVE!LOAD!LOGLEVEL!TIME!";
+const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!WALZE!RING!PLUGBOARD!START!GROUPSIZE|SAVE!LOAD!LOGLEVEL!TIME";
 #else
-const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!WALZE!RING!PLUGBOARD!START!GROUPSIZE|SAVE!LOAD!LOGLEVEL!";
+const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!WALZE!RING!PLUGBOARD!START!GROUPSIZE|SAVE!LOAD!LOGLEVEL";
 #endif
 #else
 #ifdef CLOCK
-const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZE!SAVE!LOAD!LOGLEVEL!TIME!";
+const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZE!SAVE!LOAD!LOGLEVEL!TIME";
 #else
-const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZE!SAVE!LOAD!LOGLEVEL!";
+const char APICMDLIST[] PROGMEM = "!SETTINGS!MODEL!UKW!ROTOR!RING!PLUGBOARD!START!GROUPSIZE!SAVE!LOAD!LOGLEVEL";
 #endif
 #endif
 #endif
@@ -706,7 +706,7 @@ int8_t  resetLevel=100; 	 // threshold for reset, put as variable to be able to 
 int8_t  currentWalzePos[WALZECNT]; // current position of the wheel, used during config
 
 int8_t lastKey; // last key pressed, needed to pass the info between subroutines
-char   lastKeyCode; // after parsed trough scancode
+char   lastKeyCode; // after parsed through scancode
 uint8_t lastPreset; // last loaded preset
 
 HT16K33 HT;
@@ -820,7 +820,7 @@ const byte steckerbrett[] PROGMEM = "QWERTZUIOASDFGHJKPYXCVBNML"; //
 //
 
 //Decimal points are handled outside the ht16k33 (not enough wires).
-//they are wired to analog io pins on the arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
+//they are wired to analog io pins on the Arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
 static const uint8_t dp[] PROGMEM = {14,15,16,17}; // need to use analog port a0,a1,a2,a3 for output (a4 & 5 are i2c, a6 & a7 are switch and is big red button.)
 
 /****************************************************************/
@@ -1326,7 +1326,7 @@ uint8_t readSettings(uint8_t preset) {
 
 /****************************************************************/
 //Some code from http://playground.arduino.cc/Main/PinChangeInterrupt
-//This is tested on an arduino uno and arduino nano, other models may not work
+//This is tested on an Arduino Uno and Arduino Nano, other models may not work
 void pciSetup(uint8_t pin)
 {
   *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
@@ -1825,7 +1825,7 @@ void checkSwitchPos(){
     return;
   }
 
-  adcval=analogRead(Switch);delay(1);//set internal arduino mux to position "Switch" and wait 1ms for value to stabalize
+  adcval=analogRead(Switch);delay(1);//set internal Arduino mux to position "Switch" and wait 1ms for value to stabilize
   adcval=analogRead(Switch); // get the value
 
   if (adcval<SwitchPos1){
@@ -3973,7 +3973,7 @@ void loop() {
     serialInputBuffer.toUpperCase();
     serialInputBuffer.trim(); // trim off any trailing \n or white space.
     Serial.println();
-    Serial.println(serialInputBuffer);
+    //Serial.println(serialInputBuffer);
     if (serialInputBuffer.length()==0)
       serialInputBuffer="#";
     if (serialInputBuffer[0]=='#'){
@@ -4575,7 +4575,7 @@ void loop() {
     serialEvent();
     if (stringComplete) {
       Serial.print(F("Received something: "));
-      Serial.println(serialInputBuffer);
+      //Serial.println(serialInputBuffer);
       serialInputBuffer = "";
       stringComplete = false;
     }
@@ -4609,7 +4609,7 @@ void loop() {
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
  Using double buffer because when a long 64+ string is sent it takes a while to process and
- the arduino buffer may be lost.
+ the Arduino buffer may be lost.
 */
 
 void serialEvent() {
@@ -4619,6 +4619,7 @@ void serialEvent() {
     while (Serial.available()) {
       // get the new byte:
       inChar = (char)Serial.read();
+      Serial.write(inChar); // Echo character
       if (inChar == '\r' ) { // treat carriage return as line feed
 	inChar='\n';
       }
