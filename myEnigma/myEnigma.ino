@@ -4291,12 +4291,30 @@ void loop() {
 	case 'W':
 	case 'E':
 	case 'R':
-	  char strBuffer[]="PR X";
-	  strBuffer[3] = '0' + key;
+          strcpy(strBuffer, "PR X");
+          strBuffer[3] = '0' + key;
 	  displayString(strBuffer, 0);
 	  saveSettings(key);
 	  delay(2000);
 	  break;
+
+	case 'D': // Show the date
+          Serial.println(F("Display date"));
+          uint8_t day, month, year;
+          year = bcd2dec(i2c_read(DS3231_ADDR,6));
+          month = bcd2dec(i2c_read(DS3231_ADDR,5));
+          day = bcd2dec(i2c_read(DS3231_ADDR,4));
+          displayString("DATE", 0);
+          delay(1000);
+          displayString(ultoa(2000 + year, strBuffer, 10), 0);
+          delay(1000);
+          strBuffer[0] = '0' + month / 10;
+          strBuffer[1] = '0' + month % 10;
+          strBuffer[2] = '0' + day / 10;
+          strBuffer[3] = '0' + day % 10;
+          displayString(strBuffer, 0);
+          delay(1000);
+          break;
 
 	} // switch
 	for (i=0;i<sizeof(prevRamState);i++){HT.displayRam[i]=prevRamState[i];} // Restore current state
