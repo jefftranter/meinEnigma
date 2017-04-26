@@ -1550,7 +1550,7 @@ void displayString(const char msg[], uint16_t sleep) {
   uint8_t i;
 
   if (standalone)
-    return; // no chip was found earlier, no point waisting time here
+    return; // no chip was found earlier, no point wasting time here
 
   for (i = 0; i < strlen(msg); i++) {
     if (msg[i]>='A' && msg[i]<='Z') HT.setLedNow(pgm_read_byte(led+msg[i]-65));
