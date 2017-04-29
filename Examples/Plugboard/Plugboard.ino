@@ -14,18 +14,17 @@
   The plugboard uses two MCP23017 16-bit i/o expander chips. The ports
   are assigned as follows:
 
-Chip:   U301
-Port:   GPA0 GPA1 GPA2 GPA3 GPA4 GPA5 GPA6 GPA7 GPB0 GPB1 GPB2 GPB3 GPB4 GPB5 GPB6 GPB7
-Plug #:  1    2    3    4    5    6    7    8    9    10   11   12   13   14   15   16
-Letter:  Q    W    E    R    T    Z    U    I    O    A    S    D    F    G    H    J
+  Chip:   U301
+  Port:   GPA0 GPA1 GPA2 GPA3 GPA4 GPA5 GPA6 GPA7 GPB0 GPB1 GPB2 GPB3 GPB4 GPB5 GPB6 GPB7
+  Plug #:  1    2    3    4    5    6    7    8    9    10   11   12   13   14   15   16
+  Letter:  Q    W    E    R    T    Z    U    I    O    A    S    D    F    G    H    J
 
-Chip:   U302
-Port:   GPA0 GPA1 GPA2 GPA3 GPA4 GPA5 GPA6 GPA7 GPB0 GPB1 GPB2 GPB3 GPB4 GPB5 GPB6 GPB7
-Plug #:  17   18   19   20   21   22   23   24   25   26   NC   NC   NC   NC   NC   NC
-Letter:  K    P    Y    X    C    V    B    N    M    L
+  Chip:   U302
+  Port:   GPA0 GPA1 GPA2 GPA3 GPA4 GPA5 GPA6 GPA7 GPB0 GPB1 GPB2 GPB3 GPB4 GPB5 GPB6 GPB7
+  Plug #:  17   18   19   20   21   22   23   24   25   26   NC   NC   NC   NC   NC   NC
+  Letter:  K    P    Y    X    C    V    B    N    M    L
 
- */
-
+*/
 
 //  MCP23017 registers, all as seen from bank 0.
 //
@@ -52,6 +51,18 @@ Letter:  K    P    Y    X    C    V    B    N    M    L
 #define GPIOB       0x13 // "
 #define OLATA       0x14 // Output latch register
 #define OLATB       0x15 // "
+
+// Lookup table of i/o port addresses for each plug number.
+char address[26] = { mcp_address, mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address,  mcp_address, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1, mcp_address + 1 };
+
+// Lookup table of register addresses for each plug number.
+char reg[26] = { GPIOA, GPIOA,  GPIOA,  GPIOA,  GPIOA,  GPIOA,  GPIOA,  GPIOA, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOA, GPIOA, GPIOA, GPIOA, GPIOA, GPIOA, GPIOA, GPIOA, GPIOB, GPIOB };
+
+// Lookup table of i/o port bits for each plug number.
+char bit[26] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1 };
+
+// Lookup table of letters for each plug #.
+char plug[27] = "QWERTZUIOASDFGHJKPYXCVBNML";
 
 // Write a single byte to i2c.
 uint8_t i2c_write(uint8_t unitaddr, uint8_t val) {
@@ -92,13 +103,13 @@ void setup() {
   Serial.println("Plugboard Demonstration");
 
   Wire.begin(); // Enable the Wire library.
-  
+
   // Initialize U301
   // Setup the port multipler
   // Init value for IOCON, bank(0)+INTmirror(no)+SQEOP(addr
   // inc)+DISSLW(Slew rate disabled)+HAEN(hw addr always
   // enabled)+ODR(INT open)+INTPOL(act-low)+0(N/A)
-  i2c_write2(mcp_address, IOCON, 0b00011110); 
+  i2c_write2(mcp_address, IOCON, 0b00011110);
   i2c_write2(mcp_address, IODIRA, 0xff); // Set all ports to inputs.
   i2c_write2(mcp_address, IODIRB, 0xff); // Set all ports to inputs.
   i2c_write2(mcp_address, GPPUA, 0xff);  // Enable pullup, seems to sometimes be false readings otherwise and guessing too slow on pullup.
@@ -108,61 +119,116 @@ void setup() {
   // Init value for IOCON, bank(0)+INTmirror(no)+SQEOP(addr
   // inc)+DISSLW(Slew rate disabled)+HAEN(hw addr always
   // enabled)+ODR(INT open)+INTPOL(act-low)+0(N/A)
-  i2c_write2(mcp_address+1, IOCON, 0b00011110);
-  i2c_write2(mcp_address+1, IODIRA, 0xff); // Set all ports to inputs.
-  i2c_write2(mcp_address+1, IODIRB, 0xff); // Set all ports to inputs.
-  i2c_write2(mcp_address+1, GPPUA, 0xff);  // Enable pullup, seems to sometimes be a problem otherwise.
-  i2c_write2(mcp_address+1, GPPUB, 0xff);  // "
+  i2c_write2(mcp_address + 1, IOCON, 0b00011110);
+  i2c_write2(mcp_address + 1, IODIRA, 0xff); // Set all ports to inputs.
+  i2c_write2(mcp_address + 1, IODIRB, 0xff); // Set all ports to inputs.
+  i2c_write2(mcp_address + 1, GPPUA, 0xff); // Enable pullup, seems to sometimes be a problem otherwise.
+  i2c_write2(mcp_address + 1, GPPUB, 0xff); // "
 }
 
 void loop() {
   int val;
 
-  Serial.print("U301");
-  //Serial.print(" IOCON = ");
-  //val = i2c_read(mcp_address, IOCON);
-  //Serial.print(val, BIN);
-  //Serial.print(" IODIRA = ");
-  //val = i2c_read(mcp_address, IODIRA);
-  //Serial.print(val, BIN);
-  //Serial.print(" IODIRB = ");
-  //val = i2c_read(mcp_address, IODIRB);
-  //Serial.print(val, BIN);
-  //Serial.print(" GPPUA = ");
-  //val = i2c_read(mcp_address, GPPUA);
-  //Serial.print(val, BIN);
-  //Serial.print(" GPPUB = ");
-  //val = i2c_read(mcp_address, GPPUB);
-  //Serial.print(val, BIN);
-  Serial.print(" GPIOA = ");
-  val = i2c_read(mcp_address, GPIOA);
-  Serial.print(val, BIN);
-  Serial.print(" GPIOB = ");
-  val = i2c_read(mcp_address, GPIOB);
-  Serial.print(val, BIN);
+  for (int i = 0; i < 10; i++ ) {
+    Serial.print("U301");
+    //Serial.print(" IOCON = ");
+    //val = i2c_read(mcp_address, IOCON);
+    //Serial.print(val, BIN);
+    //Serial.print(" IODIRA = ");
+    //val = i2c_read(mcp_address, IODIRA);
+    //Serial.print(val, BIN);
+    //Serial.print(" IODIRB = ");
+    //val = i2c_read(mcp_address, IODIRB);
+    //Serial.print(val, BIN);
+    //Serial.print(" GPPUA = ");
+    //val = i2c_read(mcp_address, GPPUA);
+    //Serial.print(val, BIN);
+    //Serial.print(" GPPUB = ");
+    //val = i2c_read(mcp_address, GPPUB);
+    //Serial.print(val, BIN);
+    Serial.print(" GPIOA = ");
+    val = i2c_read(mcp_address, GPIOA);
+    Serial.print(val, BIN);
+    Serial.print(" GPIOB = ");
+    val = i2c_read(mcp_address, GPIOB);
+    Serial.print(val, BIN);
 
-  Serial.print(" U302");
-  //Serial.print(" IOCON = ");
-  //val = i2c_read(mcp_address + 1, IOCON);
-  //Serial.print(val, BIN);
-  //Serial.print(" IODIRA = ");
-  //val = i2c_read(mcp_address + 1, IODIRA);
-  //Serial.print(val, BIN);
-  //Serial.print(" IODIRB = ");
-  //val = i2c_read(mcp_address + 1, IODIRB);
-  //Serial.print(val, BIN);
-  //Serial.print(" GPPUA = ");
-  //val = i2c_read(mcp_address + 1, GPPUA);
-  //Serial.print(val, BIN);
-  //Serial.print(" GPPUB = ");
-  //val = i2c_read(mcp_address + 1, GPPUB);
-  //Serial.print(val, BIN);
-  Serial.print(" GPIOA = ");
-  val = i2c_read(mcp_address + 1, GPIOA);
-  Serial.print(val, BIN);
-  Serial.print(" GPIOB = ");
-  val = i2c_read(mcp_address + 1, GPIOB);
-  Serial.println(val, BIN);
+    Serial.print(" U302");
+    //Serial.print(" IOCON = ");
+    //val = i2c_read(mcp_address + 1, IOCON);
+    //Serial.print(val, BIN);
+    //Serial.print(" IODIRA = ");
+    //val = i2c_read(mcp_address + 1, IODIRA);
+    //Serial.print(val, BIN);
+    //Serial.print(" IODIRB = ");
+    //val = i2c_read(mcp_address + 1, IODIRB);
+    //Serial.print(val, BIN);
+    //Serial.print(" GPPUA = ");
+    //val = i2c_read(mcp_address + 1, GPPUA);
+    //Serial.print(val, BIN);
+    //Serial.print(" GPPUB = ");
+    //val = i2c_read(mcp_address + 1, GPPUB);
+    //Serial.print(val, BIN);
+    Serial.print(" GPIOA = ");
+    val = i2c_read(mcp_address + 1, GPIOA);
+    Serial.print(val, BIN);
+    Serial.print(" GPIOB = ");
+    val = i2c_read(mcp_address + 1, GPIOB);
+    Serial.println(val, BIN);
+  }
+  Serial.println();
+  delay(3000);
 
-  delay(1000);
+  // Display level of each plug by name.
+  for (int i = 0; i < 26; i++) {
+    Serial.print("Plug ");
+    Serial.print(i + 1);
+    Serial.print(" \"");
+    Serial.print(plug[i]);
+    Serial.print("\" is ");
+    val = (i2c_read(address[i], reg[i]) >> bit[i]) & 1;
+    if (val) {
+      Serial.println("high");
+    } else {
+      Serial.println("low");
+    }
+  }
+  Serial.println();
+  delay(3000);
+
+  // Figure out what jumpers are connected by driving one port at a time
+  // low and seeing what input port(s) go low.
+  for (int i = 0; i < 26; i++) {
+
+    // Set port i to be an output.
+    i2c_write2(address[i], reg[i] - 0x12, ~(1 << bit[i])); // 0x12 is offset between GPIO and IODIR
+    // And set it low.
+    i2c_write2(address[i], reg[i], ~(1 << bit[i]));
+
+    Serial.print("Plug ");
+    Serial.print(i + 1);
+    Serial.print(" \"");
+    Serial.print(plug[i]);
+    Serial.print("\" is connected to");
+
+    for (int j = 0; j < 26; j++) {
+      if (i == j) { // Don't check for jumper connected to itself.
+        continue;
+      }
+      val = (i2c_read(address[j], reg[j]) >> bit[j]) & 1;
+      if (val == 0) {
+        Serial.print(" ");
+        Serial.print(plug[j]);
+      }
+    }
+    Serial.println();
+
+    // Set port i back to being an input.
+    i2c_write2(address[i], reg[i] - 0x12, ~(1 << bit[i]));
+    // And set it high.
+    i2c_write2(address[i], reg[i], 0xff);
+
+  }
+  Serial.println();
+  delay(3000);
 }
