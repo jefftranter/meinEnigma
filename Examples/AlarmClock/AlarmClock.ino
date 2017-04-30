@@ -5,52 +5,52 @@
 
   Jeff Tranter <tranter@pobox.com.
 
-Feature Description
--------------------
+  Feature Description
+  -------------------
 
-Time display, 12 hour mode: 100 through 1159 with rightmost decimal
-point indicating pm. 24 hour mode: 0000 through 2359.
+  Time display, 12 hour mode: 100 through 1159 with rightmost decimal
+  point indicating pm. 24 hour mode: 0000 through 2359.
 
-Second decimal point will toggle at a one second on/one second off
-rate whenever the time is displayed.
+  Second decimal point will toggle at a one second on/one second off
+  rate whenever the time is displayed.
 
-Time set: pressing four keys below display will perform as follows
-(left to right):
-- advance one hour
-- go back one hour
-- advance one minute
-- go back one minute
+  Time set: pressing four keys below display will perform as follows
+  (left to right):
+  - advance one hour
+  - go back one hour
+  - advance one minute
+  - go back one minute
 
-Chime: When enabled, will beep the time on the hour using the buzzer.
-Will beep once for every hour, from 1 through 12 (independent of 12/24
-hour mode).
+  Chime: When enabled, will beep the time on the hour using the buzzer.
+  Will beep once for every hour, from 1 through 12 (independent of 12/24
+  hour mode).
 
-Alarm: When enabled, buzzer will sound at one second on/one second off
-rate until any key is pressed.
+  Alarm: When enabled, buzzer will sound at one second on/one second off
+  rate until any key is pressed.
 
-Leftmost decimal point indicates alarm on.
+  Leftmost decimal point indicates alarm on.
 
-Keyboard keys:
+  Keyboard keys:
 
-D - Display date briefly, e.g "JA 1" "2017" or "DE24" "2018". Shows
-month and day, then year, then goes back to time mode.
+  D - Display date briefly, e.g "JA 1" "2017" or "DE24" "2018". Shows
+  month and day, then year, then goes back to time mode.
 
-C - Toggle chime. Briefly Display "CH Y" or "CH N", then goes back to
-time mode.
+  C - Toggle chime. Briefly Display "CH Y" or "CH N", then goes back to
+  time mode.
 
-M - Toggle between 12 and 24 hour mode. Briefly display "12HR" or
-"24HR", then go back to time mode.
+  M - Toggle between 12 and 24 hour mode. Briefly display "12HR" or
+  "24HR", then go back to time mode.
 
-A - Toggle alarm on/off. Briefly display "AL N" or AL Y", then go back
-to time mode. Leftmost decimal point goes on when alarm is enabled.
+  A - Toggle alarm on/off. Briefly display "AL N" or AL Y", then go back
+  to time mode. Leftmost decimal point goes on when alarm is enabled.
 
-S - Set alarm. Pressing keys under display will set alarm time,
-similar to time set. Pressing S again will exit alarm set mode.
-Leave alarm set mode if no key pressed for more than 5 seconds.
+  S - Set alarm. Pressing keys under display will set alarm time,
+  similar to time set. Pressing S again will exit alarm set mode.
+  Leave alarm set mode if no key pressed for more than 5 seconds.
 
-T - Set date. Pressing keys under display will set month and day,
-similar to time set. Pressing T again will exit date set mode.
-Leave date mode if no key pressed for more than 5 seconds.
+  T - Set date. Pressing keys under display will set month and day,
+  similar to time set. Pressing T again will exit date set mode.
+  Leave date mode if no key pressed for more than 5 seconds.
 
 */
 
@@ -67,7 +67,7 @@ Leave date mode if no key pressed for more than 5 seconds.
 #define DS3231_ADDR 0x68
 
 // Lookup table of key codes to characters.
-const char keys[] = { 'Q','W','E','R','T','Z','U','I','O','A','S','D','F','P','Y','X','C','V','B','N','M','L','G','H','J','K','1','2','3','4' };
+const char keys[] = { 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I', 'O', 'A', 'S', 'D', 'F', 'P', 'Y', 'X', 'C', 'V', 'B', 'N', 'M', 'L', 'G', 'H', 'J', 'K', '1', '2', '3', '4' };
 
 // Lookup table of decimal point output pins.
 int decimalPoint[4] = { A0, A1, A2, A3 };
@@ -99,12 +99,12 @@ int lastHour; // To determine when hour rolls over.
 int alarmHours = 9, alarmMinutes = 0;
 
 // Convert BCD to decimal.
-int bcd2dec(int bcd){
+int bcd2dec(int bcd) {
   return (bcd / 16 * 10) + (bcd % 16);
 }
 
 // Convert decimal to BCD.
-int dec2bcd(int dec){
+int dec2bcd(int dec) {
   return (dec / 10 * 16) + (dec % 10);
 }
 
@@ -146,7 +146,7 @@ void displayLetter(char letter, uint8_t dispeno) {
 
   // No lookup table needed, all LEDs are at offset 64
   HT.setDisplayRaw(dispeno * 2 + 64 / 8, val & 0xFF);
-  HT.setDisplayRaw(dispeno *2 + 64 / 8 + 1, val>>8);
+  HT.setDisplayRaw(dispeno * 2 + 64 / 8 + 1, val >> 8);
   HT.sendLed();
 }
 
@@ -176,7 +176,7 @@ void setTime()
 
 
 // Set a decimal point on display (0-3) on or off.
-void setDecimalPoint(int display, bool state=true)
+void setDecimalPoint(int display, bool state = true)
 {
   digitalWrite(decimalPoint[display], !state);
 }
@@ -199,7 +199,7 @@ void displayTime()
     if (tmpHour == 0) {
       tmpHour = 12;
     }
-    str[0] = '0' + tmpHour/ 16;
+    str[0] = '0' + tmpHour / 16;
     if (str[0] == '0') {
       str[0] = ' '; // Suppress leading zero.
     }
@@ -258,7 +258,7 @@ char getKey()
 
   if (key <= 0) {
     return 0; // Key released or no key pressed.
-  } else{     
+  } else {
     return keys[abs(key) - 1];
   }
 }
@@ -267,11 +267,11 @@ void setup() {
   // Set the pins used for decimal point output. These happen to be
   // analog outputs but are only used at digital levels.
   for (int i = 0; i < 4; i++) {
-      pinMode(decimalPoint[i], OUTPUT);
+    pinMode(decimalPoint[i], OUTPUT);
   }
 
   // Initialize serial port for debug output.
-    Serial.begin(9600);
+  Serial.begin(9600);
 
   // Need to initialize the HT chip in order for displays to work.
   // This also clears all display segments and LEDs.
@@ -284,7 +284,7 @@ void setup() {
 
   // Turn off decimal points.
   for (int i = 0; i < 4; i++) {
-      setDecimalPoint(i, false);
+    setDecimalPoint(i, false);
   }
 }
 
@@ -296,7 +296,7 @@ void loop() {
 
   // Display current time (12 or 24 hour mode).
   displayTime();
-    
+
   // Toggle alarm beep if it is active.
 
   // Check if it is time to play the chime (hour rolled over).
@@ -305,21 +305,21 @@ void loop() {
 
   // Check if key pressed.
   char key = getKey();
-    
+
   // Handle time/alarm/date set keys 1-4.
 
   // Handle date key.
   if (key == 'D') {
     displayDate();
   }
-    
+
   // Handle toggle chime key.
 
   // Handle 12/24 hour mode key
   if (key == 'M') {
     twentyFourHourMode = !twentyFourHourMode;
     if (twentyFourHourMode) {
-        printDisplay("24HR");
+      printDisplay("24HR");
     } else {
       printDisplay("12HR");
     }
@@ -329,12 +329,12 @@ void loop() {
   // Toggle alarm on/off key.
 
   // Handle alarm mode key.
-    
+
   // Handle set date keys.
 
   // Delay 1 second, unless a key was pressed.
   if (key == 0) {
-      delay(1000);
+    delay(1000);
   }
 
   // Toggle seconds decimal point.
