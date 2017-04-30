@@ -74,7 +74,7 @@ const char keys[] = { 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I', 'O', 'A', 'S', 'D'
 int decimalPoint[4] = { A0, A1, A2, A3 };
 
 // Lookup tables for names of the months of the year.
-const char *monthName[] = { "JA", "FE", "MA", "AP", "MA", "JU", "JU", "AU", "SE", "OC", "NO", "DE" };
+const char *monthName[] = { "JA", "FE", "MR", "AP", "MY", "JN", "JL", "AU", "SE", "OC", "NO", "DE" };
 
 // Object instance for HT16K33 chip.
 HT16K33 HT;
@@ -97,7 +97,7 @@ int year, month, day;
 int lastHour; // To determine when hour rolls over.
 
 // Alarm time.
-int alarmHours = 9, alarmMinutes = 0;
+int alarmHour = 9, alarmMinute = 0;
 
 // Convert BCD to decimal.
 int bcd2dec(int bcd) {
@@ -184,7 +184,7 @@ void setDecimalPoint(int display, bool on = true)
 
 
 // Display time.
-void displayTime()
+void displayTime(int hour, int minute)
 {
   char str[4];
 
@@ -312,7 +312,7 @@ void loop() {
   getTime();
 
   // Display current time (12 or 24 hour mode).
-  displayTime();
+  displayTime(hour, minute);
 
   // Toggle alarm beep if it is active.
 
@@ -378,6 +378,16 @@ void loop() {
   }
 
   // Toggle alarm on/off key.
+  if (key == 'A') {
+    alarmEnabled = !alarmEnabled;
+    alarmEnabled ? printDisplay("AL Y") : printDisplay("AL N");
+    delay(1000);
+    if (alarmEnabled) {
+      displayTime(alarmHour, alarmMinute); // Show alarm time.
+      delay(1000);
+      displayTime(hour, minute);
+    }
+  }
 
   // Handle alarm mode key.
 
