@@ -17,8 +17,8 @@
 
 HT16K33 HT;
 
-// Display a character something on one of the displays.
-// Leftmost display is 0, rightmost 3.
+// Display a character on one of the displays. Leftmost display is 0,
+// rightmost 3.
 void displayLetter(char letter, uint8_t dispeno) {
   uint8_t led;
   int8_t i;
@@ -75,4 +75,3 @@ void loop() {
     delay(200);
   }
 }
-
