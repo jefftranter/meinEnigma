@@ -16,10 +16,10 @@
 
   Time set: pressing four keys below display will perform as follows
   (left to right):
-  - advance one hour
   - go back one hour
-  - advance one minute
+  - advance one hour
   - go back one minute
+  - advance one minute
 
   Chime: When enabled, will beep the time on the hour using the buzzer.
   Will beep once for every hour, from 1 through 12 (independent of 12/24
@@ -91,7 +91,7 @@ bool alarmSetMode = false; // These two are mutually exclusive.
 bool dateSetMode = false;
 
 // Current date/time
-int hour, minute, second; // These are all stored in BCD.
+int hour, minute, second;
 int year, month, day;
 int lastHour; // To determine when hour rolls over.
 
@@ -140,11 +140,11 @@ void displayLetter(char letter, uint8_t dispeno) {
   uint16_t val;
 
   led = (dispeno) * 16;
-  if (letter > '`')
+  if (letter > '`') {
     letter -= ('a' - 'A');
+  }
   val = pgm_read_word(fontTable + letter - ' ');
 
-  // No lookup table needed, all LEDs are at offset 64
   HT.setDisplayRaw(dispeno * 2 + 64 / 8, val & 0xFF);
   HT.setDisplayRaw(dispeno * 2 + 64 / 8 + 1, val >> 8);
   HT.sendLed();
@@ -154,31 +154,31 @@ void displayLetter(char letter, uint8_t dispeno) {
 // Get current time from RTC.
 void getTime()
 {
-  year   = i2c_read(DS3231_ADDR, 6);
-  month  = i2c_read(DS3231_ADDR, 5);
-  day    = i2c_read(DS3231_ADDR, 4);
-  hour   = i2c_read(DS3231_ADDR, 2 );
-  minute = i2c_read(DS3231_ADDR, 1);
-  second = i2c_read(DS3231_ADDR, 0);
+  year   = bcd2dec(i2c_read(DS3231_ADDR, 6)); // Last two digits only.
+  month  = bcd2dec(i2c_read(DS3231_ADDR, 5));
+  day    = bcd2dec(i2c_read(DS3231_ADDR, 4));
+  hour   = bcd2dec(i2c_read(DS3231_ADDR, 2));
+  minute = bcd2dec(i2c_read(DS3231_ADDR, 1));
+  second = bcd2dec(i2c_read(DS3231_ADDR, 0));
 }
 
 
 // Write current time to RTC.
 void setTime()
 {
-  i2c_write2(DS3231_ADDR, 6, year);
-  i2c_write2(DS3231_ADDR, 5, month);
-  i2c_write2(DS3231_ADDR, 4, day);
-  i2c_write2(DS3231_ADDR, 2, hour);
-  i2c_write2(DS3231_ADDR, 1, minute);
-  i2c_write2(DS3231_ADDR, 0, second);
+  i2c_write2(DS3231_ADDR, 6, dec2bcd(year)); // Last two digits only.
+  i2c_write2(DS3231_ADDR, 5, dec2bcd(month));
+  i2c_write2(DS3231_ADDR, 4, dec2bcd(day));
+  i2c_write2(DS3231_ADDR, 2, dec2bcd(hour));
+  i2c_write2(DS3231_ADDR, 1, dec2bcd(minute));
+  i2c_write2(DS3231_ADDR, 0, dec2bcd(second));
 }
 
 
 // Set a decimal point on display (0-3) on or off.
-void setDecimalPoint(int display, bool state = true)
+void setDecimalPoint(int display, bool on = true)
 {
-  digitalWrite(decimalPoint[display], !state);
+  digitalWrite(decimalPoint[display], !on);
 }
 
 
@@ -188,24 +188,24 @@ void displayTime()
   char str[4];
 
   if (twentyFourHourMode) {
-    str[0] = '0' + hour / 16;
-    str[1] = '0' + hour % 16;
-    str[2] = '0' + minute / 16;
-    str[3] = '0' + minute % 16;
+    str[0] = '0' + hour / 10;
+    str[1] = '0' + hour % 10;
+    str[2] = '0' + minute / 10;
+    str[3] = '0' + minute % 10;
     printDisplay(str);
-    setDecimalPoint(3, false);
+    setDecimalPoint(3, false); // DOn't use am/pm indicator.
   } else {
     int tmpHour = hour % 12; // Calculate 12 hour time
     if (tmpHour == 0) {
       tmpHour = 12;
     }
-    str[0] = '0' + tmpHour / 16;
+    str[0] = '0' + tmpHour / 10;
     if (str[0] == '0') {
       str[0] = ' '; // Suppress leading zero.
     }
-    str[1] = '0' + tmpHour % 16;
-    str[2] = '0' + minute / 16;
-    str[3] = '0' + minute % 16;
+    str[1] = '0' + tmpHour % 10;
+    str[2] = '0' + minute / 10;
+    str[3] = '0' + minute % 10;
     printDisplay(str);
     if (hour >= 12) { // am/pm indicator.
       setDecimalPoint(3, true);
@@ -221,21 +221,21 @@ void displayDate()
 {
   char str[4];
   // Display the month and day.
-  str[0] = monthName[bcd2dec(month)][0];
-  str[1] = monthName[bcd2dec(month)][1];
-  if (day < 0x10) {
+  str[0] = monthName[month][0];
+  str[1] = monthName[month][1];
+  if (day < 10) {
     str[2] = ' ';
   } else {
-    str[2] = '0' + day / 16;
+    str[2] = '0' + day / 10;
   }
-  str[3] = '0' + day % 16;
+  str[3] = '0' + day % 10;
   printDisplay(str);
   delay(1000);
   // Now display the year.
   str[0] = '2';
-  str[1] = '0';
-  str[2] = '0' + year / 0x10;
-  str[3] = '0' + year % 0x10;
+  str[1] = '0'; // Will fail in the year 2100.
+  str[2] = '0' + year / 10;
+  str[3] = '0' + year % 10;
   printDisplay(str);
   delay(1000);
 }
@@ -307,6 +307,29 @@ void loop() {
   char key = getKey();
 
   // Handle time/alarm/date set keys 1-4.
+  if (key == '1' || key == '2' || key == '3' || key == '4') {
+      switch (key) {
+      case '1':
+          hour -= 1;
+          if (hour < 0) {
+              hour = 23;
+          }
+          break;
+      case '2':
+          hour = (hour + 1) % 24;
+          break;
+      case '3':
+          minute -= 1;
+          if (minute < 0) {
+              minute = 59;
+          }
+          break;
+      case '4':
+          minute = (minute + 1) % 60;      
+          break;
+      }
+      setTime();
+  }
 
   // Handle date key.
   if (key == 'D') {
