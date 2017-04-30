@@ -9,9 +9,7 @@ Feature Description
 -------------------
 
 Time display, 12 hour mode: 100 through 1159 with rightmost decimal
-point indicating pm.
-
-Time Display, 24 hour mode: 0000 through 2359.
+point indicating pm. 24 hour mode: 0000 through 2359.
 
 Second decimal point will toggle at a one second on/one second off
 rate whenever the time is displayed.
@@ -77,6 +75,39 @@ int decimalPoint[4] = { A0, A1, A2, A3 };
 // Lookup tables for names of the months of the year.
 const char *monthName[] = { "JA", "FE", "MA", "AP", "MA", "JU", "JU", "AU", "SE", "OC", "NO", "DE" };
 
+// Object instance for HT16K33 chip.
+HT16K33 HT;
+
+// Mode flags;
+bool twentyFourHourMode = false;
+bool alarmEnabled = false;
+bool chimeEnabled = false;
+
+// State flags;
+bool alarmOn = false;
+bool chiming = false;
+bool colon = false;
+bool alarmSetMode = false; // These two are mutually exclusive.
+bool dateSetMode = false;
+
+// Current date/time
+int hour, minute, second; // These are all stored in BCD.
+int year, month, day;
+int lastHour; // To determine when hour rolls over.
+
+// Alarm time.
+int alarmHours = 9, alarmMinutes = 0;
+
+// Convert BCD to decimal.
+int bcd2dec(int bcd){
+  return (bcd / 16 * 10) + (bcd % 16);
+}
+
+// Convert decimal to BCD.
+int dec2bcd(int dec){
+  return (dec / 10 * 16) + (dec % 10);
+}
+
 // Read a byte from a specific I2C address. Send one byte (address to read) and read a byte.
 uint8_t i2c_read(uint8_t unitaddr, uint8_t addr) {
   i2c_write(unitaddr, addr);
@@ -99,31 +130,6 @@ uint8_t i2c_write2(uint8_t unitaddr, uint8_t val1, uint8_t val2) {
   Wire.write(val2);
   return Wire.endTransmission();
 }
-
-
-// Object instance for HT16K33 chip.
-HT16K33 HT;
-
-// Mode flags;
-bool twentyFourHourMode = false;
-bool alarmEnabled = false;
-bool charmEnabled = false;
-
-
-// State flags;
-bool alarmOn = false;
-bool chiming = false;
-bool colon = false;
-bool alarmSetMode = false; // These two are mutually exclusive.
-bool dateSetMode = false;
-
-// Current date/time
-int hour, minute, second; // These are all stored in BCD.
-int year, month, day;
-int lastHour; // To determine when hour rolls over.
-
-// Alarm time.
-int alarmHours, alarmMinutes;
 
 
 // Display a character on one of the displays. Leftmost display is 0,
@@ -213,6 +219,25 @@ void displayTime()
 // Display date.
 void displayDate()
 {
+  char str[4];
+  // Display the month and day.
+  str[0] = monthName[bcd2dec(month)][0];
+  str[1] = monthName[bcd2dec(month)][1];
+  if (day < 0x10) {
+    str[2] = ' ';
+  } else {
+    str[2] = '0' + day / 16;
+  }
+  str[3] = '0' + day % 16;
+  printDisplay(str);
+  delay(1000);
+  // Now display the year.
+  str[0] = '2';
+  str[1] = '0';
+  str[2] = '0' + year / 0x10;
+  str[3] = '0' + year % 0x10;
+  printDisplay(str);
+  delay(1000);
 }
 
 
@@ -284,7 +309,10 @@ void loop() {
   // Handle time/alarm/date set keys 1-4.
 
   // Handle date key.
-
+  if (key == 'D') {
+    displayDate();
+  }
+    
   // Handle toggle chime key.
 
   // Handle 12/24 hour mode key
@@ -302,10 +330,12 @@ void loop() {
 
   // Handle alarm mode key.
     
-  // Handle set date key.
+  // Handle set date keys.
 
-  // Delay 1 second.
-  delay(1000);
+  // Delay 1 second, unless a key was pressed.
+  if (key == 0) {
+      delay(1000);
+  }
 
   // Toggle seconds decimal point.
   colon = !colon;
