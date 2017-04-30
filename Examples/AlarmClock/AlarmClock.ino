@@ -21,9 +21,7 @@
   - go back one minute
   - advance one minute
 
-  Chime: When enabled, will beep the time on the hour using the buzzer.
-  Will beep once for every hour, from 1 through 12 (independent of 12/24
-  hour mode).
+  Chime: When enabled, will beep on the hour using the buzzer.
 
   Alarm: When enabled, buzzer will sound at one second on/one second off
   rate until any key is pressed.
@@ -68,6 +66,9 @@
 
 // Lookup table of key codes to characters.
 const char keys[] = { 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I', 'O', 'A', 'S', 'D', 'F', 'P', 'Y', 'X', 'C', 'V', 'B', 'N', 'M', 'L', 'G', 'H', 'J', 'K', '1', '2', '3', '4' };
+
+// Output used for buzzer.
+#define BUZZER 13
 
 // Lookup table of decimal point output pins.
 int decimalPoint[4] = { A0, A1, A2, A3 };
@@ -263,12 +264,24 @@ char getKey()
   }
 }
 
+
+// Chime by briefly playing buzzer.
+void chime()
+{
+  digitalWrite(BUZZER, HIGH);
+  delay(100);
+  digitalWrite(BUZZER, LOW);
+}
+
+
 void setup() {
   // Set the pins used for decimal point output. These happen to be
   // analog outputs but are only used at digital levels.
   for (int i = 0; i < 4; i++) {
     pinMode(decimalPoint[i], OUTPUT);
   }
+
+  pinMode(BUZZER, OUTPUT);    // Initialize digital pin 13 as an output.
 
   // Initialize serial port for debug output.
   Serial.begin(9600);
@@ -286,6 +299,10 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     setDecimalPoint(i, false);
   }
+
+  // Get current time from RTC.
+  getTime();
+  lastHour = hour;
 }
 
 
@@ -300,6 +317,12 @@ void loop() {
   // Toggle alarm beep if it is active.
 
   // Check if it is time to play the chime (hour rolled over).
+  if (minute == 0 && lastHour != hour) {
+    if (chimeEnabled) {
+      chime();
+    }
+    lastHour = hour;
+  }
 
   // If no keys pressed for 5 seconds, exit alarm or date set modes.
 
@@ -337,6 +360,11 @@ void loop() {
   }
 
   // Handle toggle chime key.
+  if (key == 'C') {
+    chimeEnabled = !chimeEnabled;
+    chimeEnabled ? printDisplay("CH Y") : printDisplay("CH N");
+    delay(1000);
+  }
 
   // Handle 12/24 hour mode key
   if (key == 'M') {
