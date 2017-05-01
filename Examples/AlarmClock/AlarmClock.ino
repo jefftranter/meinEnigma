@@ -50,6 +50,11 @@
   similar to time set. Pressing T again will exit date set mode.
   Leave date mode if no key pressed for more than 5 seconds.
 
+  To Do:
+
+  Should store settings in EEPROM and not reset them on powerup.
+  Handle key held down as multiple keypresses.
+
 */
 
 // Wire library for i2c.
@@ -99,6 +104,7 @@ int alarmHour = 9, alarmMinute = 0;
 
 // Idle time - since no key pressed (in seconds).
 int idleTime = 0;
+
 
 // Convert BCD to decimal.
 int bcd2dec(int bcd) {
@@ -226,8 +232,8 @@ void displayDate()
 {
   char str[4];
   // Display the month and day.
-  str[0] = monthName[month-1][0];
-  str[1] = monthName[month-1][1];
+  str[0] = monthName[month - 1][0];
+  str[1] = monthName[month - 1][1];
   if (day < 10) {
     str[2] = ' ';
   } else {
@@ -282,7 +288,7 @@ void chime()
 }
 
 // Turn alarm buzzer on or off.
-void alarm(bool state=true)
+void alarm(bool state = true)
 {
   digitalWrite(BUZZER, state);
 }
@@ -295,10 +301,10 @@ void setup() {
     pinMode(decimalPoint[i], OUTPUT);
   }
 
-  pinMode(BUZZER, OUTPUT);    // Initialize digital pin 13 as an output.
+  pinMode(BUZZER, OUTPUT);    // Initialize buzzer digital pin as an output.
 
   // Initialize serial port for debug output.
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
   // Need to initialize the HT chip in order for displays to work.
   // This also clears all display segments and LEDs.
@@ -314,12 +320,8 @@ void setup() {
     setDecimalPoint(i, false);
   }
 
-
   // Start in time mode.
   mode = time;
-
-  // Get current time from RTC.
-  getTime();
 }
 
 
@@ -347,7 +349,7 @@ void loop() {
   }
 
   // Check if it is time to play the alarm.
-  if (alarmEnabled && alarmHour == hour && alarmMinute == minute) {
+  if (alarmEnabled && alarmHour == hour && alarmMinute == minute  && second < 3) {
     alarmActive = true;
   }
 
@@ -437,7 +439,7 @@ void loop() {
           case '2':
             month += 1;
             if (month > 12) {
-                month = 1;
+              month = 1;
             }
             break;
           case '3':
@@ -449,7 +451,7 @@ void loop() {
           case '4':
             day += 1;
             if (day >= 31) {
-                day = 1;
+              day = 1;
             }
             break;
         }
@@ -473,7 +475,7 @@ void loop() {
     delay(1000);
   }
 
-  // Handle 12/24 hour mode key
+  // Handle 12/24 hour mode key.
   if (key == 'M') {
     twentyFourHourMode = !twentyFourHourMode;
     if (twentyFourHourMode) {
