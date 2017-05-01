@@ -97,15 +97,20 @@ int year, month, day;
 // Alarm time.
 int alarmHour = 9, alarmMinute = 0;
 
+// Idle time - since no key pressed (in seconds).
+int idleTime = 0;
+
 // Convert BCD to decimal.
 int bcd2dec(int bcd) {
   return (bcd / 16 * 10) + (bcd % 16);
 }
 
+
 // Convert decimal to BCD.
 int dec2bcd(int dec) {
   return (dec / 10 * 16) + (dec % 10);
 }
+
 
 // Read a byte from a specific I2C address. Send one byte (address to read) and read a byte.
 uint8_t i2c_read(uint8_t unitaddr, uint8_t addr) {
@@ -113,6 +118,7 @@ uint8_t i2c_read(uint8_t unitaddr, uint8_t addr) {
   Wire.requestFrom(unitaddr, (uint8_t)1);
   return Wire.read();    // Read one byte
 }
+
 
 // Write a single byte to I2C.
 uint8_t i2c_write(uint8_t unitaddr, uint8_t val) {
@@ -338,10 +344,20 @@ void loop() {
 
   // Check if it is time to play the alarm.
 
-  // If no keys pressed for 5 seconds, exit alarm or date set modes.
+  // If no keys pressed for 5 seconds, exit alarm or date set modes and revert to time mode.
+  if (idleTime > 5) {
+    mode = time;
+  }
 
   // Check if key pressed.
   char key = getKey();
+
+  // Update how long since a key was pressed.
+  if (key != 0) {
+    idleTime = 0; // Key pressed, reset time.
+  } else {
+    idleTime++; // No key pressed, update time.
+  }
 
   // Handle time/alarm/date set keys 1-4.
   if (key == '1' || key == '2' || key == '3' || key == '4') {
