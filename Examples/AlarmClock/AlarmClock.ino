@@ -370,7 +370,26 @@ void loop() {
         setTime();
         break;
       case alarmSet:
-        
+        switch (key) {
+          case '1':
+            alarmHour -= 1;
+            if (alarmHour < 0) {
+              alarmHour = 23;
+            }
+            break;
+          case '2':
+            alarmHour = (alarmHour + 1) % 24;
+            break;
+          case '3':
+            alarmMinute -= 1;
+            if (alarmMinute < 0) {
+              alarmMinute = 59;
+            }
+            break;
+          case '4':
+            alarmMinute = (alarmMinute + 1) % 60;
+            break;
+        }
         break;
       case dateSet:
         switch (key) {
