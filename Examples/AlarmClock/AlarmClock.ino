@@ -88,13 +88,11 @@ bool chimeEnabled = false;
 bool alarmOn = false;
 bool chiming = false;
 bool colon = false;
-bool alarmSetMode = false; // These two are mutually exclusive.
-bool dateSetMode = false;
+enum { time, alarmSet, dateSet } mode;
 
 // Current date/time
 int hour, minute, second;
 int year, month, day;
-int lastHour; // To determine when hour rolls over.
 
 // Alarm time.
 int alarmHour = 9, alarmMinute = 0;
@@ -222,8 +220,8 @@ void displayDate()
 {
   char str[4];
   // Display the month and day.
-  str[0] = monthName[month][0];
-  str[1] = monthName[month][1];
+  str[0] = monthName[month-1][0];
+  str[1] = monthName[month-1][1];
   if (day < 10) {
     str[2] = ' ';
   } else {
@@ -231,14 +229,18 @@ void displayDate()
   }
   str[3] = '0' + day % 10;
   printDisplay(str);
-  delay(1000);
-  // Now display the year.
+}
+
+
+// Display year.
+void displayYear()
+{
+  char str[4];
   str[0] = '2';
   str[1] = '0'; // Will fail in the year 2100.
   str[2] = '0' + year / 10;
   str[3] = '0' + year % 10;
   printDisplay(str);
-  delay(1000);
 }
 
 
@@ -300,9 +302,12 @@ void setup() {
     setDecimalPoint(i, false);
   }
 
+
+  // Start in time mode.
+  mode = time;
+
   // Get current time from RTC.
   getTime();
-  lastHour = hour;
 }
 
 
@@ -311,18 +316,27 @@ void loop() {
   // Get current time from RTC.
   getTime();
 
-  // Display current time (12 or 24 hour mode).
-  displayTime(hour, minute);
+  // Diplay current time, alarm time, or date depending on mode.
+  switch (mode) {
+    case time:
+      displayTime(hour, minute);
+      break;
+    case alarmSet:
+      displayTime(alarmHour, alarmMinute);
+      break;
+    case dateSet:
+      displayDate();
+      break;
+  }
 
   // Toggle alarm beep if it is active.
 
   // Check if it is time to play the chime (hour rolled over).
-  if (minute == 0 && lastHour != hour) {
-    if (chimeEnabled) {
-      chime();
-    }
-    lastHour = hour;
+  if (chimeEnabled && minute == 0 && second == 0) {
+    chime();
   }
+
+  // Check if it is time to play the alarm.
 
   // If no keys pressed for 5 seconds, exit alarm or date set modes.
 
@@ -331,32 +345,71 @@ void loop() {
 
   // Handle time/alarm/date set keys 1-4.
   if (key == '1' || key == '2' || key == '3' || key == '4') {
-      switch (key) {
-      case '1':
-          hour -= 1;
-          if (hour < 0) {
+    switch (mode) {
+      case time:
+        switch (key) {
+          case '1':
+            hour -= 1;
+            if (hour < 0) {
               hour = 23;
-          }
-          break;
-      case '2':
-          hour = (hour + 1) % 24;
-          break;
-      case '3':
-          minute -= 1;
-          if (minute < 0) {
+            }
+            break;
+          case '2':
+            hour = (hour + 1) % 24;
+            break;
+          case '3':
+            minute -= 1;
+            if (minute < 0) {
               minute = 59;
-          }
-          break;
-      case '4':
-          minute = (minute + 1) % 60;      
-          break;
-      }
-      setTime();
+            }
+            break;
+          case '4':
+            minute = (minute + 1) % 60;
+            break;
+        }
+        setTime();
+        break;
+      case alarmSet:
+        
+        break;
+      case dateSet:
+        switch (key) {
+          case '1':
+            month -= 1;
+            if (month <= 0) {
+              month = 12;
+            }
+            break;
+          case '2':
+            month += 1;
+            if (month > 12) {
+                month = 1;
+            }
+            break;
+          case '3':
+            day -= 1;
+            if (day <= 0) {
+              day = 31;
+            }
+            break;
+          case '4':
+            day += 1;
+            if (day >= 31) {
+                day = 1;
+            }
+            break;
+        }
+        setTime();
+        break;
+    }
   }
 
   // Handle date key.
   if (key == 'D') {
     displayDate();
+    delay(1000);
+    displayYear();
+    delay(1000);
   }
 
   // Handle toggle chime key.
@@ -390,8 +443,22 @@ void loop() {
   }
 
   // Handle alarm mode key.
+  if (key == 'S') {
+    if (mode == alarmSet) {
+      mode = time;
+    } else {
+      mode = alarmSet;
+    }
+  }
 
   // Handle set date keys.
+  if (key == 'T') {
+    if (mode == dateSet) {
+      mode = time;
+    } else {
+      mode = dateSet;
+    }
+  }
 
   // Delay 1 second, unless a key was pressed.
   if (key == 0) {
