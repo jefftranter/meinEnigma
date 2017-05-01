@@ -80,14 +80,14 @@ const char *monthName[] = { "JA", "FE", "MR", "AP", "MY", "JN", "JL", "AU", "SE"
 HT16K33 HT;
 
 // Mode flags;
-bool twentyFourHourMode = false;
-bool alarmEnabled = false;
-bool chimeEnabled = false;
+bool twentyFourHourMode = false; // true: 24 hour mode, false: 12 hour mode.
+bool alarmEnabled = false; // True when alarm function is enabled.
+bool chimeEnabled = false; // True when chime function is enabled.
 
 // State flags;
-bool alarmOn = false;
-bool chiming = false;
-bool colon = false;
+bool alarmActive = false; // True when alarm is currently ringing.
+bool alarmState = false; // State of alarm buzzer when ringing.
+bool colon = false;  // Curent on/off state of flashing colon/decimal point.
 enum { time, alarmSet, dateSet } mode;
 
 // Current date/time
@@ -281,6 +281,12 @@ void chime()
   digitalWrite(BUZZER, LOW);
 }
 
+// Turn alarm buzzer on or off.
+void alarm(bool state=true)
+{
+  digitalWrite(BUZZER, state);
+}
+
 
 void setup() {
   // Set the pins used for decimal point output. These happen to be
@@ -322,7 +328,7 @@ void loop() {
   // Get current time from RTC.
   getTime();
 
-  // Diplay current time, alarm time, or date depending on mode.
+  // Display current time, alarm time, or date depending on mode.
   switch (mode) {
     case time:
       displayTime(hour, minute);
@@ -335,14 +341,21 @@ void loop() {
       break;
   }
 
-  // Toggle alarm beep if it is active.
-
   // Check if it is time to play the chime (hour rolled over).
   if (chimeEnabled && minute == 0 && second == 0) {
     chime();
   }
 
   // Check if it is time to play the alarm.
+  if (alarmEnabled && alarmHour == hour && alarmMinute == minute) {
+    alarmActive = true;
+  }
+
+  // Toggle alarm beep if it is active.
+  if (alarmActive) {
+    alarm(alarmState);
+    alarmState = !alarmState;
+  }
 
   // If no keys pressed for 5 seconds, exit alarm or date set modes and revert to time mode.
   if (idleTime > 5) {
@@ -351,6 +364,12 @@ void loop() {
 
   // Check if key pressed.
   char key = getKey();
+
+  // If alarm is active, pressing any key will turn it off.
+  if (alarmActive && key != 0) {
+    alarmActive = false;
+    key = 0; // Throw away key press.
+  }
 
   // Update how long since a key was pressed.
   if (key != 0) {
