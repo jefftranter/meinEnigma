@@ -10,7 +10,7 @@
 
 #include <Wire.h>
 
-// I2C address of DS32310 real-time clock.
+// I2C address of DS3231 real-time clock.
 #define DS3231_ADDR 0x68
 
 // Lookup tables for names of the days of the week and months of the year.
@@ -42,7 +42,7 @@ void printLeadingZero(int val)
 }
 
 // Get time and date from RTC and print it out the serial port.
-// Not that these could be wrong, especially day of the week, if you
+// Note that these could be wrong, especially day of the week, if you
 // have not set the real-time clock.
 void printTime() {
   uint8_t hour, minute, second;
@@ -66,7 +66,7 @@ void printTime() {
   Serial.print("-");
   Serial.print(monthName[month - 1]);
   Serial.print("-");
-  Serial.print("20");
+  Serial.print("20"); // RTC does not store the century.
   printLeadingZero(year);
   Serial.print(" ");
   Serial.println(dayName[dow - 1]);

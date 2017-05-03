@@ -18,5 +18,5 @@ void loop() {
   digitalWrite(BUZZER, HIGH); // Turn the buzzer on.
   delay(500);                 // Wait for half a second.
   digitalWrite(BUZZER, LOW);  // Turn the buzzer off.
-  delay(500);                 // wait for half a second.
+  delay(500);                 // Wait for half a second.
 }

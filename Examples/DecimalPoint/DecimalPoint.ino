@@ -45,7 +45,7 @@ void loop() {
 #endif
 
 #if 0
-  // Alternatve pattern. Walk decimal points from left to right.
+  // Alternative pattern. Walk decimal points from left to right.
   for (int i = 0; i <= 4; i++) {
     digitalWrite(A0, !(i == 1));
     digitalWrite(A1, !(i == 2));
