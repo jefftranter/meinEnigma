@@ -2,7 +2,7 @@
   MeinEnigma Example
 
   Demonstrates reading DS3231 real-time clock over I2C.
-  See results through Ardino IDE serial monitor set to 9600 bps.
+  See results through Arduino IDE serial monitor set to 9600 bps.
 
   Jeff Tranter <tranter@pobox.com.
 

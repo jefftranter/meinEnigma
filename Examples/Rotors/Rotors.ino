@@ -3,7 +3,7 @@
 
   Demonstrates reading the rotors.
 
-  This uses the encoder library as was adapted from the basic example
+  This uses the encoder library and was adapted from the basic example
   at http://www.pjrc.com/teensy/td_libs_Encoder.html
 
   Jeff Tranter <tranter@pobox.com.
