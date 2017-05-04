@@ -25,40 +25,50 @@ void setup() {
 void loop() {
   int i;
 
-  // All on
+  // All on.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.setLed(ledTable[i]);
   }
   HT.sendLed();
   delay(1000);
-   
-  // All off
+
+  // Change brightness.
+  for (i = 16; i >= 0; i--) {
+    HT.setBrightness(i);
+    delay(100);
+  }
+  for (i = 0; i <= 16; i++) {
+    HT.setBrightness(i);
+    delay(100);
+  }
+
+  // All off.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.clearLed(ledTable[i]);
   }
   HT.sendLed();
   delay(1000);
 
-  // Walk all LEDs on
+  // Walk all LEDs on.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.setLedNow(ledTable[i]);
     delay(100);
   }
   
-  // Walk all LEDs off;
+  // Walk all LEDs off.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.clearLedNow(ledTable[i]);
     delay(100);
   }
   
-  // Walk one LED on
+  // Walk one LED on.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.setLedNow(ledTable[i]);
     delay(100);
     HT.clearLedNow(ledTable[i]);
   }
 
-  // All on
+  // All on.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.setLed(ledTable[i]);
   }
@@ -71,13 +81,13 @@ void loop() {
     HT.setLedNow(ledTable[i]);
   }
  
-   // All off
+   // All off.
   for (i = 0; i < sizeof(ledTable); i++) {
     HT.clearLed(ledTable[i]);
   }
   HT.sendLed();
   
-  // Random
+  // Random.
   for (int j=0; j < 500; j++ ) {
     i = random(sizeof(ledTable));
     if (random(2) == 1) {
@@ -88,4 +98,3 @@ void loop() {
     delay(20);
   }
 }
-
