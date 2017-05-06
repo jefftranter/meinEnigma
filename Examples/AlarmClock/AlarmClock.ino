@@ -52,7 +52,12 @@
 
   To Do:
 
-  Should store settings in EEPROM and not reset them on powerup.
+  Allow turning rotors to set date or alarm time (not time because it
+  is too easy to bump them).
+
+  Should store settings including alarm time in EEPROM and not reset
+  them on powerup.
+
   Handle key held down as multiple keypresses.
 
 */
@@ -68,6 +73,9 @@
 
 // I2C address of DS32310 real-time clock.
 #define DS3231_ADDR 0x68
+
+// Lookup table of discrete LEDs.
+byte ledTable[] = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 28, 29, 30, 31, 19, 20, 21, 22, 23, 24, 25, 26, 27 };
 
 // Lookup table of key codes to characters.
 const char keys[] = { 'Q', 'W', 'E', 'R', 'T', 'Z', 'U', 'I', 'O', 'A', 'S', 'D', 'F', 'P', 'Y', 'X', 'C', 'V', 'B', 'N', 'M', 'L', 'G', 'H', 'J', 'K', '1', '2', '3', '4' };
@@ -342,6 +350,33 @@ void loop() {
       displayDate();
       break;
   }
+
+  // Display time in binary on the discrete LEDs.
+  // Show hours on the LEDs in the first row.
+  for (int b = 0; b < 8; b++) {
+    if (hour & bit(b)) {
+      HT.setLed(ledTable[8-b]);
+    } else {
+      HT.clearLed(ledTable[8-b]);
+    }
+  }
+  // Show minutes on the LEDs in the second row.
+  for (int b = 0; b < 8; b++) {
+    if (minute & bit(b)) {
+      HT.setLed(ledTable[16-b]);
+    } else {
+      HT.clearLed(ledTable[16-b]);
+    }
+  }
+  // Show seconds on the LEDs in the third row.
+  for (int b = 0; b < 8; b++) {
+    if (second & bit(b)) {
+      HT.setLed(ledTable[25-b]);
+    } else {
+      HT.clearLed(ledTable[25-b]);
+    }
+  }
+  HT.sendLed();
 
   // Check if it is time to play the chime (hour rolled over).
   if (chimeEnabled && minute == 0 && second == 0) {
