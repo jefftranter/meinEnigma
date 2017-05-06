@@ -32,6 +32,11 @@ void loop() {
   HT.sendLed();
   delay(1000);
 
+  // Blinking
+  HT.setBlinkRate(HT16K33_DSP_BLINK2HZ);
+  delay(5000);
+  HT.setBlinkRate(HT16K33_DSP_NOBLINK);
+
   // Change brightness.
   for (i = 16; i >= 0; i--) {
     HT.setBrightness(i);

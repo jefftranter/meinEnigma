@@ -35,6 +35,11 @@
 
 #include "Arduino.h"
 
+#define HT16K33_DSP_NOBLINK   B00000000 // Display setup - no blink
+#define HT16K33_DSP_BLINK2HZ  B00000010 // Display setup - 2hz blink
+#define HT16K33_DSP_BLINK1HZ  B00000100 // Display setup - 1hz blink
+#define HT16K33_DSP_BLINK05HZ B00000110 // Display setup - 0.5hz blink
+
 class HT16K33
 {
  public:

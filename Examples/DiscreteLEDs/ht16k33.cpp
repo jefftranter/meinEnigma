@@ -479,7 +479,7 @@ uint8_t HT16K33::setBlinkRate(uint8_t rate){
     case HT16K33_DSP_BLINK2HZ:
     case HT16K33_DSP_BLINK1HZ:
     case HT16K33_DSP_BLINK05HZ:
-      i2c_write(HT16K33_DSP |rate);
+      i2c_write(HT16K33_DSP | rate | HT16K33_DSP_ON);
       return 0;
       ;;
   default:
