@@ -2,7 +2,7 @@
   MeinEnigma Example
 
   Read the values of the function switch and the big red switch.
-  See results through Ardino IDE serial monitor set to 9600 bps.
+  See results through Arduino IDE serial monitor set to 9600 bps.
 
   Jeff Tranter <tranter@pobox.com.
 
@@ -36,13 +36,13 @@ void loop() {
   val = analogRead(MODE_SWITCH);
   Serial.print("  Mode switch = ");
   Serial.print(val);
-  if (val < 128) {
+  if (val < 1024 * 1/8) {
     Serial.println(" (pos 5)");
-  } else if (val < 384) {
+  } else if (val < 1024 * 3/8) {
     Serial.println(" (pos 4)");
-  } else if (val < 640) {
+  } else if (val < 1024 * 5/8) {
     Serial.println(" (pos 3)");
-  } else if (val < 896) {
+  } else if (val < 1024 * 7/8) {
     Serial.println(" (pos 2)");
   } else {
     Serial.println(" (pos 1)");
