@@ -88,11 +88,11 @@ void loop() {
   HT.sendLed();
   
   // Random.
-  for (int j=0; j < 500; j++ ) {
+  for (int j = 0; j < 500; j++ ) {
     i = random(sizeof(ledTable));
     if (random(2) == 1) {
       HT.setLedNow(ledTable[i]);
-    } else{
+    } else {
       HT.clearLedNow(ledTable[i]);
     }
     delay(20);
