@@ -105,47 +105,30 @@ void setup() {
   Wire.begin(); // Enable the Wire library.
 
   // Initialize U301
-  // Setup the port multipler
+  // Set up the port multiplier.
   // Init value for IOCON, bank(0)+INTmirror(no)+SQEOP(addr
   // inc)+DISSLW(Slew rate disabled)+HAEN(hw addr always
   // enabled)+ODR(INT open)+INTPOL(act-low)+0(N/A)
   i2c_write2(mcp_address, IOCON, 0b00011110);
   i2c_write2(mcp_address, IODIRA, 0xff); // Set all ports to inputs.
   i2c_write2(mcp_address, IODIRB, 0xff); // Set all ports to inputs.
-  i2c_write2(mcp_address, GPPUA, 0xff);  // Enable pullup, seems to sometimes be false readings otherwise and guessing too slow on pullup.
+  i2c_write2(mcp_address, GPPUA, 0xff);  // Enable pullup.
   i2c_write2(mcp_address, GPPUB, 0xff);  // "
 
-  // Initialize U302
-  // Init value for IOCON, bank(0)+INTmirror(no)+SQEOP(addr
-  // inc)+DISSLW(Slew rate disabled)+HAEN(hw addr always
-  // enabled)+ODR(INT open)+INTPOL(act-low)+0(N/A)
+  // Initialize U302 - same as above
   i2c_write2(mcp_address + 1, IOCON, 0b00011110);
-  i2c_write2(mcp_address + 1, IODIRA, 0xff); // Set all ports to inputs.
-  i2c_write2(mcp_address + 1, IODIRB, 0xff); // Set all ports to inputs.
-  i2c_write2(mcp_address + 1, GPPUA, 0xff); // Enable pullup, seems to sometimes be a problem otherwise.
-  i2c_write2(mcp_address + 1, GPPUB, 0xff); // "
+  i2c_write2(mcp_address + 1, IODIRA, 0xff);
+  i2c_write2(mcp_address + 1, IODIRB, 0xff);
+  i2c_write2(mcp_address + 1, GPPUA, 0xff);
+  i2c_write2(mcp_address + 1, GPPUB, 0xff);
 }
 
 void loop() {
   int val;
 
+  // Display levels of each hardware port.
   for (int i = 0; i < 10; i++ ) {
     Serial.print("U301");
-    //Serial.print(" IOCON = ");
-    //val = i2c_read(mcp_address, IOCON);
-    //Serial.print(val, BIN);
-    //Serial.print(" IODIRA = ");
-    //val = i2c_read(mcp_address, IODIRA);
-    //Serial.print(val, BIN);
-    //Serial.print(" IODIRB = ");
-    //val = i2c_read(mcp_address, IODIRB);
-    //Serial.print(val, BIN);
-    //Serial.print(" GPPUA = ");
-    //val = i2c_read(mcp_address, GPPUA);
-    //Serial.print(val, BIN);
-    //Serial.print(" GPPUB = ");
-    //val = i2c_read(mcp_address, GPPUB);
-    //Serial.print(val, BIN);
     Serial.print(" GPIOA = ");
     val = i2c_read(mcp_address, GPIOA);
     Serial.print(val, BIN);
@@ -154,21 +137,6 @@ void loop() {
     Serial.print(val, BIN);
 
     Serial.print(" U302");
-    //Serial.print(" IOCON = ");
-    //val = i2c_read(mcp_address + 1, IOCON);
-    //Serial.print(val, BIN);
-    //Serial.print(" IODIRA = ");
-    //val = i2c_read(mcp_address + 1, IODIRA);
-    //Serial.print(val, BIN);
-    //Serial.print(" IODIRB = ");
-    //val = i2c_read(mcp_address + 1, IODIRB);
-    //Serial.print(val, BIN);
-    //Serial.print(" GPPUA = ");
-    //val = i2c_read(mcp_address + 1, GPPUA);
-    //Serial.print(val, BIN);
-    //Serial.print(" GPPUB = ");
-    //val = i2c_read(mcp_address + 1, GPPUB);
-    //Serial.print(val, BIN);
     Serial.print(" GPIOA = ");
     val = i2c_read(mcp_address + 1, GPIOA);
     Serial.print(val, BIN);
