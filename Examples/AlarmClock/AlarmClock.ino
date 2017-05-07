@@ -14,6 +14,10 @@
   Second decimal point will toggle at a one second on/one second off
   rate whenever the time is displayed.
 
+  The time is also displayed in binary using the discrete LEDs. The
+  hours are shown on the LEDs in the first row, minutes on the second
+  row, and seconds on the third row.
+
   Time set: pressing four keys below display will perform as follows
   (left to right):
   - go back one hour
