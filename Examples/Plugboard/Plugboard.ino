@@ -64,6 +64,9 @@ char bit[26] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 
 // Lookup table of letters for each plug #.
 char plug[27] = "QWERTZUIOASDFGHJKPYXCVBNML";
 
+// List of plugboard connections, indexed by plug #.
+char connections[26];
+
 // Write a single byte to i2c.
 uint8_t i2c_write(uint8_t unitaddr, uint8_t val) {
   Wire.beginTransmission(unitaddr);
@@ -164,6 +167,11 @@ void loop() {
   Serial.println();
   delay(3000);
 
+  // Clear list of connections.
+  for (int i = 0; i < 26; i++) {
+      connections[i] = -1;
+  }
+
   // Figure out what jumpers are connected by driving one port at a time
   // low and seeing what input port(s) go low.
   for (int i = 0; i < 26; i++) {
@@ -185,6 +193,7 @@ void loop() {
       }
       val = (i2c_read(address[j], reg[j]) >> bit[j]) & 1;
       if (val == 0) {
+        connections[i] = j;
         Serial.print(" ");
         Serial.print(plug[j]);
       }
@@ -198,5 +207,17 @@ void loop() {
 
   }
   Serial.println();
+
+  // Print list of connections.
+  Serial.print("Plugboard connections:");
+  for (int i = 0; i < 26; i++) {
+    if (connections[i] != -1 && i < connections[i]) {
+      Serial.print(" ");
+      Serial.print(plug[i]);
+      Serial.print(plug[connections[i]]);
+    }
+  }
+  Serial.println();
+
   delay(3000);
 }
