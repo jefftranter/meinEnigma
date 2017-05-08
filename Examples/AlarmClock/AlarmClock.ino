@@ -271,8 +271,13 @@ void displayYear()
 // Show four characters on display.
 void printDisplay(const char str[4])
 {
+  static char lastStr[4];
+
   for (int i = 0; i < 4; i++) {
-    displayLetter(str[i], i);
+    if (str[i] != lastStr[i]) { // Don't update display if it has not changed from last time.
+      displayLetter(str[i], i);
+      lastStr[i] = str[i];
+    }
   }
 }
 
