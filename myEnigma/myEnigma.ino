@@ -86,11 +86,11 @@
  *Milestone:
  *
  *
- *
+ *PWM pins:3,5,6,9,10,11
  *Port assignment:
  * d0/d1 - Serial port
  * d2,3,4,5,6,7 encoder
- * d8,9 - soundboard io
+ * d8,9 - soundboard io - hardwired, can't be changed
  * d10,11 encoder
  * d12 - soundboard busy
  * d13 - buzzer 
@@ -107,8 +107,8 @@
 */
 
 //Also search for "how version CODE_VERSION " and change that ("V")
-//value is version * 100 so v1.23=123
-#define CODE_VERSION 93
+//value is version * 100 so 123 means v1.23
+#define CODE_VERSION 94
 
 //the prototype has a few things different
 //#define PROTOTYPE
@@ -230,7 +230,7 @@ uint8_t timeBase; //ms to base all numbers on
 //[wheel1low,wheel1high,wheel2low,wheel2high...
 
 #define WALZECNT 4
-//if count is something else than 4 the pin this definitions (and several other things) also need to change
+//if count is something else than 4 then this definitions (and several other things) also need to change
 static const uint8_t encoderPins[WALZECNT * 2] PROGMEM = {3, 2, 4, 5, 6, 7, 10,11};
 volatile uint8_t encoderState[WALZECNT] = {0xff, 0xff, 0xff, 0xff};
 volatile unsigned long encoderChange[WALZECNT] = {0, 0, 0, 0};// When last change happened
@@ -273,7 +273,7 @@ volatile boolean encoderMoved[WALZECNT] = {false, false, false, false};
 enum operationMode_t {run,plugboard,rotortype,ukw,model,none} operationMode;
 
 ///
-///Serial input stuff, Arduino serial input buffer is 64 bytes
+///Serial input stuff, arduino serial input buffer is 64 bytes
 ///max allowed msg length is 250 characters plus some spaces = 300
 ///Tried to make this buffer larger hoping to be able to capture long strings but it's still issues
 /// possible due to delays in the main loop and speed it arrives at (64 bytes takes 0.55ms at 115200)
@@ -678,7 +678,7 @@ const enigmaModels_t EnigmaModels[] PROGMEM = {
 //also note that MAXPRESET*SETTINGSIZE < EEPROM.length()
 
 typedef struct {
-  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without losing eeprom info
+  uint8_t   fwVersion;         /// firmware version, saved here to make it possible to do fw upgrade without loosing eeprom info
   enigmaModel_t model;
   uint8_t   ukw;               /// Umkehrwalze - what reflector that is loaded
   uint8_t   walze[WALZECNT];   /// what wheel that currently is in the 3 or 4 positions
@@ -706,7 +706,7 @@ int8_t  resetLevel=100; 	 // threshold for reset, put as variable to be able to 
 int8_t  currentWalzePos[WALZECNT]; // current position of the wheel, used during config
 
 int8_t lastKey; // last key pressed, needed to pass the info between subroutines
-char   lastKeyCode; // after parsed through scancode
+char   lastKeyCode; // after parsed trough scancode
 uint8_t lastPreset; // last loaded preset
 
 HT16K33 HT;
@@ -820,7 +820,7 @@ const byte steckerbrett[] PROGMEM = "QWERTZUIOASDFGHJKPYXCVBNML"; //
 //
 
 //Decimal points are handled outside the ht16k33 (not enough wires).
-//they are wired to analog io pins on the Arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
+//they are wired to analog io pins on the arduino and then some hardware that is in between will light up the correct leds decimal point at the right moment
 static const uint8_t dp[] PROGMEM = {14,15,16,17}; // need to use analog port a0,a1,a2,a3 for output (a4 & 5 are i2c, a6 & a7 are switch and is big red button.)
 
 /****************************************************************/
@@ -951,20 +951,20 @@ void playSound(uint16_t fileno, boolean wait=true) {
   if (wait){  //Should we make sure it's done playing
     //it's just small snippets so it shouldn't take too long
     cnt=0;
-    while (digitalRead(BUSY) == LOW && cnt<300){
+    while (digitalRead(BUSY) == LOW && cnt<1500){
       cnt++;
       delay(10);
     }
   }
 
-  retry=3;
+  retry=10;
   do {
     //Send play command
     //    sendCommand(dfcmd_PLAYNO,fileno);
     sendCommand(dfcmd_PLAYNAME,fileno);
     //Wait for it to start playing
     cnt=0;
-    while (digitalRead(BUSY) == HIGH && cnt<200){cnt++;delay(1);}
+    while (digitalRead(BUSY) == HIGH && cnt<100){cnt++;delay(1);}
     retry--;
   } while (digitalRead(BUSY) == HIGH && retry > 0); // if not started send again
   
@@ -1089,7 +1089,16 @@ void printTime(){
   minute=i2c_read(DS3231_ADDR,1);
   second=i2c_read(DS3231_ADDR,0);
 
-  if (hour<0x10){Serial.print(F("0"));}
+  Serial.print(F("20"));
+  Serial.print(year, HEX);
+  Serial.print(F("-"));
+  if (month < 0x10) { Serial.print(F("0")); }
+  Serial.print(month, HEX);
+  Serial.print("-");
+  if (day < 0x10) { Serial.print(F("0")); }
+  Serial.print(day, HEX);
+
+  if (hour<0x10){Serial.print(F(" 0"));}else{Serial.print(F(" "));}
   Serial.print(hour,HEX);
   Serial.print(F(":"));
   if (minute<0x10){Serial.print(F("0"));}
@@ -1097,14 +1106,6 @@ void printTime(){
   Serial.print(F(":"));
   if (second<0x10){Serial.print(F("0"));}
   Serial.print(second,HEX);
-  Serial.print(" 20");
-  Serial.print(year, HEX);
-  Serial.print("-");
-  if (month < 0x10) { Serial.print(F("0")); }
-  Serial.print(month, HEX);
-  Serial.print("-");
-  if (day < 0x10) { Serial.print(F("0")); }
-  Serial.print(day, HEX);
 
 } // printTime
 #endif
@@ -1187,11 +1188,13 @@ void printSettings(){
   printWheel(&settings.currentWalze[0]);
   Serial.println();
 
+#ifdef CLOCK
   if (clock_active!=missing){
     Serial.print(F("Time is: "));
     printTime();
     Serial.println();
   }
+#endif
 
 } // printSettings
 
@@ -1339,7 +1342,7 @@ uint8_t readSettings(uint8_t preset) {
 
 /****************************************************************/
 //Some code from http://playground.arduino.cc/Main/PinChangeInterrupt
-//This is tested on an Arduino Uno and Arduino Nano, other models may not work
+//This is tested on an arduino uno and arduino nano, other models may not work
 void pciSetup(uint8_t pin)
 {
   *digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // enable pin
@@ -1550,7 +1553,7 @@ void displayString(const char msg[], uint16_t sleep) {
   uint8_t i;
 
   if (standalone)
-    return; // no chip was found earlier, no point wasting time here
+    return; // no chip was found earlier, no point waisting time here
 
   for (i = 0; i < strlen(msg); i++) {
     if (msg[i]>='A' && msg[i]<='Z') HT.setLedNow(pgm_read_byte(led+msg[i]-65));
@@ -1838,7 +1841,7 @@ void checkSwitchPos(){
     return;
   }
 
-  adcval=analogRead(Switch);delay(1);//set internal Arduino mux to position "Switch" and wait 1ms for value to stabilize
+  adcval=analogRead(Switch);delay(1);//set internal arduino mux to position "Switch" and wait 1ms for value to stabalize
   adcval=analogRead(Switch); // get the value
 
   if (adcval<SwitchPos1){
@@ -2538,7 +2541,9 @@ boolean checkWalzes() {
 	  changed = true;
 	  direction = down;
 #ifdef SoundBoard
-	  playSound(1201); // rotor click 1
+	  if ((clock_active==active && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active){
+	    playSound(1201); // rotor click 1
+	  }
 #endif
 	  break;
 	  
@@ -2550,7 +2555,9 @@ boolean checkWalzes() {
 	  changed = true;
 	  direction = up;
 #ifdef SoundBoard
-	  playSound(1202); // rotor click 2
+	  if ((clock_active==active && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active){
+	    playSound(1202); // rotor click 2
+	  }
 #endif
 	  break;
 	} // switch
@@ -4281,7 +4288,7 @@ void loop() {
 	  break;
 
 	case 'V': // Show version CODE_VERSION but making that dynamic requires a lot of code
-	  displayString("V093",0);
+	  displayString("V094",0);
 	  decimalPoint(1,true);
 	  delay(2000);
 	  decimalPoint(1,false);
@@ -4291,30 +4298,12 @@ void loop() {
 	case 'W':
 	case 'E':
 	case 'R':
-          strcpy(strBuffer, "PR X");
-          strBuffer[3] = '0' + key;
+          char strBuffer[] = "PR X";
+	  strBuffer[3] = '0' + key;
 	  displayString(strBuffer, 0);
 	  saveSettings(key);
 	  delay(2000);
 	  break;
-
-	case 'D': // Show the date
-          Serial.println(F("Display date"));
-          uint8_t day, month, year;
-          year = bcd2dec(i2c_read(DS3231_ADDR,6));
-          month = bcd2dec(i2c_read(DS3231_ADDR,5));
-          day = bcd2dec(i2c_read(DS3231_ADDR,4));
-          displayString("DATE", 0);
-          delay(1000);
-          displayString(ultoa(2000 + year, strBuffer, 10), 0);
-          delay(1000);
-          strBuffer[0] = '0' + month / 10;
-          strBuffer[1] = '0' + month % 10;
-          strBuffer[2] = '0' + day / 10;
-          strBuffer[3] = '0' + day % 10;
-          displayString(strBuffer, 0);
-          delay(1000);
-          break;
 
 	} // switch
 	for (i=0;i<sizeof(prevRamState);i++){HT.displayRam[i]=prevRamState[i];} // Restore current state
@@ -4684,7 +4673,7 @@ void loop() {
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
  Using double buffer because when a long 64+ string is sent it takes a while to process and
- the Arduino buffer may be lost.
+ the arduino buffer may be lost.
 */
 
 void serialEvent() {
