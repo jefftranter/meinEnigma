@@ -7,7 +7,7 @@
  *  know about them (yet).
  *  If it bugs you - fix it and tell me about it, that's the way I learn.
  *
- *  Copyright: Peter Sjoberg <peters-enigma AT techwiz DOT ca>
+ *  Copyright: Peter Sjoberg <peters-enigma AT techwiz DOT ca>+
  *  License: GPLv3
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License version 3 as 
@@ -21,7 +21,7 @@
  *    You should have received a copy of the GNU General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Status: early beta, not much space left for any more features so concentrate on bug fixing.
+ *  Status: not much space left for any more features so concentrate on bug fixing.
  *
  *  History:
  *  v0.00 - test of library, keyboard and LEDs
@@ -36,13 +36,11 @@
  *  v0.91 - fixed one rotor pinout being wrong way
  *  v0.92 - added more sound
  *  v0.93 - JT: fixed UKW available display bug
+ *  v0.94 - implemented a few pull requests from JT.
+ *  v1.00 - release version
  *
  *
- * TODO: a lot but some "highlights"...
- *   tie everything together in a user usable interface
- *   add sound
- *
- * Shortcomings (all due to lack of program space):
+ * TODO/Shortcomings (all due to lack of program space):
  *   No UKWD
  *   No UHR
  *   limited number of enigmas partly because
@@ -51,14 +49,14 @@
  *   Limited functions on serial API
  *     picky about format entered
  *     ringstellung always letters
- *     walze is numeric
+ *     walze is only numeric
  *
  * Decisions:
  *   The wheels are numbered left to right since that's the order they are
  *   in codebooks and it's the natural order of things when reading left to right.
  *   The are numbered 0-1-2-3 so walze/wheel/rotor 0 is that extra thin wheel the navy got.
  *   currentWalze always includes ring settings, only place it's adjusted for is in encryption.
- *   eeprom management will be simplified. 
+ *   eeprom management is simplified. 
  *    Drop the movement of save location and have it all at fixed positions. We still have 100000 saves guaranteed.
  *    Currently the array is 51 bytes and that would give at most 20 locations but by going
  *      with 15 locations of 64 bytes each we can easier change the content at a 
@@ -74,16 +72,15 @@
  *	on the other hand, low on progmem so UKW-D does not fit.
  *   UHR doesn't fit in this version but if it did, maybe process it in encrypt() instead
  *	of remapping the plugboard - so it can be visualized in loglevel 2
- *
+ *   rewrite encrypt() in some less code consuming way, maybe a function to handle the rotor so same
+ *      code can be used both ways.
  *
  * BUGS:
- *      <s?>for virtual plugboard - need an empty so settings can be cleared also
+ *	pressing more than one key is handled wrong
  *      no code to handle presets except from serial
  *	doublestepping is hardcoded to always enabled
  *      plugboard enabled even for models that doesn't have a plugboard
- *	pressing more than one key is handled wrong
  *
- *Milestone:
  *
  *
  *PWM pins:3,5,6,9,10,11
@@ -106,9 +103,9 @@
  *
 */
 
-//Also search for "how version CODE_VERSION " and change that ("V")
+//Also search for "Show version CODE_VERSION " and change that ("V")
 //value is version * 100 so 123 means v1.23
-#define CODE_VERSION 94
+#define CODE_VERSION 100
 
 //the prototype has a few things different
 //#define PROTOTYPE
@@ -278,7 +275,7 @@ enum operationMode_t {run,plugboard,rotortype,ukw,model,none} operationMode;
 ///Tried to make this buffer larger hoping to be able to capture long strings but it's still issues
 /// possible due to delays in the main loop and speed it arrives at (64 bytes takes 0.55ms at 115200)
 ///
-#define MAXSERIALBUFF 150
+#define MAXSERIALBUFF 210   /// max size is about 210, anything bigger and commands stops working (255-longest command(!Plugboard:AB CD EF GH IJ KL MN OP QR ST)- '\0')
 String serialInputBuffer = "";         /// a string to hold incoming data
 boolean stringComplete = false;  /// whether the string is complete
 
@@ -964,7 +961,7 @@ void playSound(uint16_t fileno, boolean wait=true) {
     sendCommand(dfcmd_PLAYNAME,fileno);
     //Wait for it to start playing
     cnt=0;
-    while (digitalRead(BUSY) == HIGH && cnt<100){cnt++;delay(1);}
+    while (digitalRead(BUSY) == HIGH && cnt<200){cnt++;delay(1);}
     retry--;
   } while (digitalRead(BUSY) == HIGH && retry > 0); // if not started send again
   
@@ -998,9 +995,11 @@ char normalize(char ch){
 
 /****************************************************************/
 void printValError(String val){
-  Serial.print(F("%ERROR: Unknown/Illegal value specified >"));
-  Serial.print(val);
-  Serial.println(F("< keeping old setting."));
+  if (val.charAt(0) != '?'){
+    Serial.print(F("%ERROR: Unknown/Illegal value specified >"));
+    Serial.print(val);
+    Serial.println(F("< keeping old setting."));
+  }
 } // printValError
 
 /****************************************************************/
@@ -1425,14 +1424,6 @@ void  copyEnigmaModel(enigmaModel_t model){
   }
 } // copyEnigmaModel
 
-/****************************************************************/
-// from https://learn.adafruit.com/memories-of-an-arduino/measuring-free-memory
-int freeRam () 
-{
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
-}
 
 /****************************************************************/
 void parsePlugboard(char* plugboard){
@@ -1656,7 +1647,7 @@ void displayWalzes(){
 #endif
 	  hourminute=i2c_read2(DS3231_ADDR,1);
 #ifdef SoundBoard
-	  if ( (hourminute & 0xff)==0 && sound_active==active){ // we are at full hour and sound is not disabled
+	  if ( (hourminute & 0xff)==0 && sound_active==active && settings.tts==true){ // we are at full hour and sound is not disabled
 	    if (oldhourminute!=hourminute){ // and we just got there
 	      hour=bcd2dec(hourminute>>8);//figure out what hour it is
 	      if (hour ==0){
@@ -3496,74 +3487,86 @@ void parseCommand() {
   enigmaModels_t checkModel;
   
   /*
+
     command starts with "!"
     a ":" separate command from values
     nothing after ":" means show current setting
     any command can be shortened until it's unique
     Commands;
-    !MODEL
     !SETTINGS
+    !MODEL
     !UKW
     !ROTOR
     !RING
-    !START
     !PLUGBOARD
-    !GROUP
+    !START
+    !GROUPSIZE
     !SAVE
     !LOAD
     !LOGLEVEL
     !TIME
-    !DEBUG
-    !VERBOSE
-    !DUKW
+
     "#" as input is treated as a comment and ignored
-    "# as output is respond to a command
+    "% as output is respond to a command
     A-Z is text to encrypt/decrypt
     ">" starts a encrypted/decrypted text response
     Sample:
-    !MODEL?
-    #MODELS:
-    # M3
-    # M4
-    !MODEL: M3
-    #MODEL:M3
-    !SETTINGS:
-    #Settings; M3:B:I-II-III:AAA:AAA:
-    !UKW: B
-    #UKW:B
-    !ROT: VII-I-IV
-    #ROTOR:VII-I-IV
-    !WALZE: 6,1,3
-    #WALZE:VI-I-III
-    !RING: A B C
-    #RING:A B C
-    !PLUGBOARD: TH EQ UI CK BR OW NF XJ MP SV
-    #PLUGBOARD:BR CK EQ MP NF OW SV TH UI XJ
-    !START: FSF
-    #Rotor start set to: F S F
-    !SETTINGS:
-    #SETTINGS:M3,B,VI-I-III,ABC,FSF,BR CK EQ MP NF OW SV TH UI XJ
-    !SAVE:1
-    #Settings saved as preset:1
-    ENI
-    >
-    !START: OLD
-    #Rotor start set to; O L D
-    RBRHY ESYXZ KVDKA IIVOU UYIZG LOBSF OVFGM FQVT
-    >(the decrypted text)
-
-    !LOAD:2
-    #Loaded preset 2
-    #SETTINGS:M3,B,V-I-IV,XYZ,FSF,
-    !SETTINGS:M3,B,6-1-3,ABC,FSF,H EQ UI CK BR OW NF XJ MP SV
-    #SETTINGS:M3,B,VI-I-III,ABC,FSF,BR CK EQ MP NF OW SV TH UI XJ
+    !Model:M3
+    %MODEL:M3
+    !UKW:UKWB
+    %UKW: UKWB
+    !Rotor:1,7,3
+    %ROTOR:    I - VII - III
+    !Ring:X,D,R
+    %RING: - X D R
+    !PL:EQ UI CK BR OW NF XJ MP SV
+    %PLUGBOARD: BR CK EQ FN IU JX MP OW SV
+    !SE
+    Version: 0.94
+    Preset: 1
+    
+    Odometer: 53937
+    TTS: ON
+    Serial number: 4000001001
+    
+    Model: M3  (Enigma M3, German Navy (Kriegsmarine))
+    Reflector: UKWB
+    Rotors:    I - VII - III
+    Ringstellung: - X D R
+    Plugboard: virtual - BR CK EQ FN IU JX MP OW SV
+    CurrentWalze: - I Q Z
+    !sta:abc
+    %START: - A B C
+    !sav:1
+    %SAVE - Save settings as preset 1
+    
+    meinenigma
+    >CJCQP VAOKG
+    !loa:1
+    %LOAD - Read settings from preset 1
+    Version: 0.94
+    Preset: 1
+    
+    Odometer: 53957
+    TTS: ON
+    Serial number: 4000001001
+    
+    Model: M3  (Enigma M3, German Navy (Kriegsmarine))
+    Reflector: UKWB
+    Rotors:    I - VII - III
+    Ringstellung: - X D R
+    Plugboard: virtual - BR CK EQ FN IU JX MP OW SV
+    CurrentWalze: - A B C
+    
+    CJCQP VAOKG
+    >MEINE NIGMA
 
   */
 
-  pos=serialInputBuffer.indexOf('?');
-  if (pos <0){ // if not question mark
+  //  pos=serialInputBuffer.indexOf('?');
+  //  if (pos <0){ // if not question mark
     pos=serialInputBuffer.indexOf(':');
-  }
+    //  }
   
   if (pos==-1){
     // if no colon is given, behave as if it was one in the end
@@ -3984,6 +3987,14 @@ void loop() {
 #endif
 
 #ifdef PSDEBUG
+/****************************************************************/
+// from https://learn.adafruit.com/memories-of-an-arduino/measuring-free-memory
+int freeRam () 
+{
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
   //PSDEBUG
   freeNow=freeRam();
   if (freeNow != prevFreeRam){
@@ -4288,7 +4299,7 @@ void loop() {
 	  break;
 
 	case 'V': // Show version CODE_VERSION but making that dynamic requires a lot of code
-	  displayString("V094",0);
+	  displayString("V100",0);
 	  decimalPoint(1,true);
 	  delay(2000);
 	  decimalPoint(1,false);
