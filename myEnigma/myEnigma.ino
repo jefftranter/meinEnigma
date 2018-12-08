@@ -38,6 +38,12 @@
  *  v0.93 - JT: fixed UKW available display bug
  *  v0.94 - implemented a few pull requests from JT.
  *  v1.00 - release version
+ *  v1.01 - minor fix, max sound timeout= 4 sec not 15 sec
+ *  v1.02 - New PCB has correct pinorder for encoder 0
+ *  v1.03 - Fixed clock mode sound mute bug
+ *  v1.04 - Added test mode for plugboard, in mode==Model - plug in a physical cable and the lampboard lights up
+ *  v1.05 - Ignore non digits when entering time.
+ *  v1.06 - checkPlugboard: added a short delay after dropping a pin to allow an externa UHR box to detect it
  *
  *
  * TODO/Shortcomings (all due to lack of program space):
@@ -105,10 +111,13 @@
 
 //Also search for "Show version CODE_VERSION " and change that ("V")
 //value is version * 100 so 123 means v1.23
-#define CODE_VERSION 100
+#define CODE_VERSION 106
 
 //the prototype has a few things different
 //#define PROTOTYPE
+
+//PCB rev 1 and later has encoder pins in numeric order
+#define PCBREV1
 
 //Select plugboard order, keyboard or numeric
 //on M4 the plugboard is organized in numeric order
@@ -143,9 +152,6 @@ static const uint16_t EEPROMSIZE=1024;
 #endif
 
 enum Modes_t {active,inactive,missing,empty}; // status of misc things
-
-//function prototype
-//void checkPlugboard();
 
 #ifdef SoundBoard
 //AltSoftSerial comes from https://github.com/PaulStoffregen/AltSoftSerial
@@ -228,10 +234,17 @@ uint8_t timeBase; //ms to base all numbers on
 
 #define WALZECNT 4
 //if count is something else than 4 then this definitions (and several other things) also need to change
+#ifdef PCBREV1
+static const uint8_t encoderPins[WALZECNT * 2] PROGMEM = {2, 3, 4, 5, 6, 7, 10,11};
+#else
 static const uint8_t encoderPins[WALZECNT * 2] PROGMEM = {3, 2, 4, 5, 6, 7, 10,11};
+#endif
 volatile uint8_t encoderState[WALZECNT] = {0xff, 0xff, 0xff, 0xff};
 volatile unsigned long encoderChange[WALZECNT] = {0, 0, 0, 0};// When last change happened
 volatile boolean encoderMoved[WALZECNT] = {false, false, false, false};
+
+//used in checkPlugboard to show what is connected or not
+static boolean LEDson=false;
 
 //port that the big red button is on - to reset to factory defaults
 #ifdef PROTOTYPE
@@ -947,8 +960,9 @@ void playSound(uint16_t fileno, boolean wait=true) {
 
   if (wait){  //Should we make sure it's done playing
     //it's just small snippets so it shouldn't take too long
+    //max lenght is about 3sec so timeout after 4sec
     cnt=0;
-    while (digitalRead(BUSY) == LOW && cnt<1500){
+    while (digitalRead(BUSY) == LOW && cnt<400){
       cnt++;
       delay(10);
     }
@@ -961,7 +975,7 @@ void playSound(uint16_t fileno, boolean wait=true) {
     sendCommand(dfcmd_PLAYNAME,fileno);
     //Wait for it to start playing
     cnt=0;
-    while (digitalRead(BUSY) == HIGH && cnt<200){cnt++;delay(1);}
+    while (digitalRead(BUSY) == HIGH && cnt<400){cnt++;delay(1);}
     retry--;
   } while (digitalRead(BUSY) == HIGH && retry > 0); // if not started send again
   
@@ -992,6 +1006,51 @@ char normalize(char ch){
   while (ch>=letterCnt){ch-=letterCnt;}
   return ch;
 }
+
+/****************************************************************/
+///
+/// print a 8bit hex number with leading 0
+///
+void printHex2(uint8_t val) {
+  if (val < 0x10) {
+    Serial.print(F("0"));
+  };
+  Serial.print(val, HEX);
+} //printHex2
+
+/****************************************************************/
+///
+/// print a 16bit hex number with leading 0
+///
+void printHex4(uint16_t val) {
+  printHex2(val >> 8 & 0xFF);
+  printHex2(val & 0xFF);
+} //printHex4
+
+/****************************************************************/
+///
+/// print a 8bit binary number with leading 0 and space at 8 bits.
+///
+void printBin8(uint8_t val) {
+  int8_t bitno;
+  for (bitno = 7; bitno >= 0; bitno--) {
+    if (bitRead(val, bitno)) {
+      Serial.print(F("1"));
+    } else {
+      Serial.print(F("0"));
+    }
+  }
+  Serial.print(F(" "));
+} //printBin8
+
+/****************************************************************/
+///
+/// print a 16bit binary number with leading 0 and space at 8 bits.
+///
+void printBin16(uint16_t val) {
+  printBin8(val >> 8 & 0xFF);
+  printBin8(val & 0xFF);
+} //printBin16
 
 /****************************************************************/
 void printValError(String val){
@@ -1110,13 +1169,21 @@ void printTime(){
 #endif
 
 /****************************************************************/
-void printSettings(){
-  uint8_t i;
-
+void printVersion(){
   Serial.print(F("Version: "));
   Serial.print(CODE_VERSION/100,DEC);
   Serial.print(F("."));
+  if (int(CODE_VERSION%100) <10){
+    Serial.print(F("0"));
+  }
   Serial.println(int(CODE_VERSION%100),DEC);
+} // printVersion()
+
+/****************************************************************/
+void printSettings(){
+  uint8_t i;
+
+  printVersion();
   Serial.print(F("Preset: "));
   Serial.println(lastPreset,DEC);
   Serial.println();
@@ -1194,8 +1261,20 @@ void printSettings(){
     Serial.println();
   }
 #endif
-
 } // printSettings
+
+/****************************************************************/
+//Clear the lamp board - leaving the rotors alone
+//used by checkPlugboard and checkSwitch
+void clearLampBoard(){
+  if (LEDson){ // only run if it was turned on by checkPlugboard
+    for (uint8_t i=0;i<26;i++){
+      HT.clearLed(pgm_read_byte(led+i));
+    }
+    HT.sendLed();
+    LEDson=false;
+  }
+}
 
 /****************************************************************/
 //calculate a checksum of a block
@@ -1544,7 +1623,7 @@ void displayString(const char msg[], uint16_t sleep) {
   uint8_t i;
 
   if (standalone)
-    return; // no chip was found earlier, no point waisting time here
+    return; // no chip was found earlier, no point wasting time here
 
   for (i = 0; i < strlen(msg); i++) {
     if (msg[i]>='A' && msg[i]<='Z') HT.setLedNow(pgm_read_byte(led+msg[i]-65));
@@ -1832,7 +1911,7 @@ void checkSwitchPos(){
     return;
   }
 
-  adcval=analogRead(Switch);delay(1);//set internal arduino mux to position "Switch" and wait 1ms for value to stabalize
+  adcval=analogRead(Switch);delay(1);//set internal arduino mux to position "Switch" and wait 1ms for value to stabilize
   adcval=analogRead(Switch); // get the value
 
   if (adcval<SwitchPos1){
@@ -1878,6 +1957,8 @@ void checkSwitchPos(){
     Serial.print(F("Machine mode: "));
     Serial.println(newModeTxt);
 
+    checkPlugboard(); // possible turn off the LEDs
+    
     //Sanity check, if model changed the UKW/Walze/ETW may no longer be valid
     //Check done here since at this point the model is set
     //If done in checkWalze you would lose your config if you go from M4 to M3 and back to M4
@@ -1939,10 +2020,8 @@ void setup() {
   char strBuffer[]="PR X";
 
   Serial.begin(38400);
-  Serial.print(F("MeinEnigma v"));
-  Serial.print(CODE_VERSION/100,DEC);
-  Serial.print(F("."));
-  Serial.println(int(CODE_VERSION%100),DEC);
+  Serial.print(F("MeinEnigma "));
+  printVersion();
 
 #ifdef TESTCRYPTO
   Serial.print(F(" Test crypto no "));
@@ -2051,12 +2130,11 @@ void setup() {
       }
     }
   }
-
   
   if (standalone){
     Serial.println(F("No IC detected,assuming standalone"));
     plugboardPresent=false;
-    resetLevel=-1;//disable the reset button    
+    resetLevel=-1;//disable the reset button
 #ifdef SoundBoard
     sound_active=missing; //assume no soundboard
   } else {
@@ -2532,7 +2610,8 @@ boolean checkWalzes() {
 	  changed = true;
 	  direction = down;
 #ifdef SoundBoard
-	  if ((clock_active==active && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active){
+          //operationMode==model
+          if ((clock_active==active && operationMode==model && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active ){
 	    playSound(1201); // rotor click 1
 	  }
 #endif
@@ -2546,7 +2625,7 @@ boolean checkWalzes() {
 	  changed = true;
 	  direction = up;
 #ifdef SoundBoard
-	  if ((clock_active==active && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active){
+          if ((clock_active==active && operationMode==model && (lastKeyCode=='0' || lastKeyCode=='1' || lastKeyCode=='2' || lastKeyCode=='3')) || clock_active!=active){
 	    playSound(1202); // rotor click 2
 	  }
 #endif
@@ -2902,8 +2981,7 @@ boolean checkWalzes() {
 // update the plugboard array with what plugs that are connected
 
 void checkPlugboard() {
-  //  uint8_t plug,bitt,mcp,port,i,plug2;
-  uint8_t plug,i,plug2,valA[4];
+  uint8_t plug,i,plugged,valA[4];
   uint16_t val;
   letters_t newplugboard;
   letters_t plugs;
@@ -2947,14 +3025,21 @@ void checkPlugboard() {
   }
 
   plugboardEmpty=true; // signal that nothing is plugged in
+  plugged=0;
+  
+  if (operationMode!=model){
+    clearLampBoard();
+  }
 
   for (plug=0;plug<sizeof(settings.plugboard);plug++){
-
+    
     //make port "plug" output
     i2c_write2(pbLookup[plug][0],IODIRA+pbLookup[plug][1],0xff ^ (1<<pbLookup[plug][2]));
     //set  port "plug" low
     i2c_write2(pbLookup[plug][0],GPIOA+pbLookup[plug][1],0xff ^ (1<<pbLookup[plug][2]));
-
+    
+    delay(10); // give UHR a chance to detect it
+    
     //get all values back
     val=i2c_read2(mcp_address,GPIOA);
     valA[0]=val & 0xFF;
@@ -2963,6 +3048,7 @@ void checkPlugboard() {
     val=i2c_read2(mcp_address+1,GPIOA);
     valA[2]=val & 0xFF;
     valA[3]=val >> 8;
+
     //if any one is low we have a connection
     for (i=0;i<26;i++){ // sizeof(pbLookup)/sizeof(pbLookup[0])
       if (i==plug)
@@ -2970,23 +3056,29 @@ void checkPlugboard() {
       if (bitRead(valA[(pbLookup[i][0]-mcp_address)*2+pbLookup[i][1]],pbLookup[i][2])==0){
 	plugs.letter[plug]=i; // that plug is connected to 'i'
 	plugboardEmpty=false; // something is plugged in
+        plugged++;
       }
     }
     
     //make the port input again
     //i2c_write2(mcp,GPIOA+port,0xff);
     //i2c_write2(mcp,IODIRA+port,0xff);
-    i2c_write2(pbLookup[plug][0],GPIOA+pbLookup[plug][1],0xff);
-    i2c_write2(pbLookup[plug][0],IODIRA+pbLookup[plug][1],0xff);
+    //i2c_write2(pbLookup[plug][0],GPIOA+pbLookup[plug][1],0xff);
+    i2c_write2(pbLookup[plug][0], IODIRA+pbLookup[plug][1],0xff);
+    i2c_write2(pbLookup[plug][0], GPPUA + pbLookup[plug][1], 0xff); // enable pullup
   } // for plug
+
   
   //transpose the plugboard to real letters
   for (i = 0; i < sizeof(newplugboard.letter); i++) {
     newplugboard.letter[pgm_read_byte(steckerbrett+i)-'A']=pgm_read_byte(&steckerbrett[0]+plugs.letter[i])-'A';
   }
 
-  if (plugboardEmpty==true && settings.plugboardMode != physicalpb) 
-    return;
+  if (plugboardEmpty==true){
+    clearLampBoard();
+    if (settings.plugboardMode != physicalpb)
+      return;
+  }
 
   // If anything is plugged in on the physical plugboard it overrides any virtual config
   settings.plugboardMode=physicalpb;
@@ -3024,9 +3116,9 @@ void checkPlugboard() {
 	//save ch_in and ch_out
       }
     }
-  }
+  
 #endif
-
+    
     if (settings.plugboardMode==config) // if we were in config mode, move on to virtual plugboard before saving it
       settings.plugboardMode=virtualpb;
     saveSettings(0);
@@ -3036,7 +3128,18 @@ void checkPlugboard() {
       Serial.println();
       delay(200); // mostly to debounce the plug connection
     }
-  }
+    if (operationMode==model){
+      if (plugged==2){ // only two plugged in and in "model" mode which is test mode - light up the corresponding LEDs
+        LEDson=true;
+        for (i = 0; i < sizeof(settings.plugboard); i++) {
+          if (settings.plugboard.letter[i] > i) {
+            HT.setLed(pgm_read_byte(led+i));
+            HT.setLedNow(pgm_read_byte(led+settings.plugboard.letter[i]));
+          }
+        }
+      }
+    } // if operationMode==model
+  } // if something changed
 } // checkPlugboard
 
 //debug doublestep
@@ -3826,6 +3929,21 @@ void parseCommand() {
       minute = bcd2dec(i2c_read(DS3231_ADDR,1));
       second = bcd2dec(i2c_read(DS3231_ADDR,0));
 
+/*
+ // 29356->30376 = 1020 bytes for this code
+      val.replace(" ","");
+      val.replace("/","");
+      val.replace(":","");
+      val.replace("-","");
+*/
+ // 29356->29546 = 190 bytes
+      for(pos=0;pos<val.length();pos++){
+        if (!isDigit(val.charAt(pos))){
+                val.remove(pos,1);
+        }
+      }
+//      Serial.println(val);
+
       switch (val.length()) {
       case 0:
           break;
@@ -3863,7 +3981,8 @@ void parseCommand() {
           second = val.substring(12,14).toInt();
           break;
       default:
-          Serial.println(F("ERROR: invalid time/date"));
+          Serial.println(F("ERROR: invalid time/date valid format is:"));
+          Serial.println(F("!TIME:YYYYMMDDHHMMSS"));
           break;
       }
 
@@ -4128,7 +4247,7 @@ int freeRam ()
       if (checkWalzes() || HT.keysPressed()!=0){ // rotor(s) were changed
 	displayWalzes();
       }
-      if (logLevel>1)
+      if (logLevel>1 || operationMode==model)
       	checkPlugboard();
     } // if ! standalone
   }
@@ -4299,7 +4418,7 @@ int freeRam ()
 	  break;
 
 	case 'V': // Show version CODE_VERSION but making that dynamic requires a lot of code
-	  displayString("V100",0);
+	  displayString("V106",0);
 	  decimalPoint(1,true);
 	  delay(2000);
 	  decimalPoint(1,false);
